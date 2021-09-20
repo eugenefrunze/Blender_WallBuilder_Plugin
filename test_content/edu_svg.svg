@@ -1,0 +1,8 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="aqua" xmlns="http://www.w3.org/2000/svg">
+        <path id="sample_geometry"
+        bbp_type="wall_base"
+        bbp_height="250"
+        d="M0 0L100 100L100 200L0 200"
+        stroke="black"
+        stroke-width="5px"/>
+</svg>
