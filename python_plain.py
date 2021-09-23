@@ -1,42 +1,37 @@
 import bpy
+from bpy.props import EnumProperty
 
-class MrMenu(bpy.types.Menu):
-    bl_label = 'test jopa menu'
-    bl_idname = 'OBJECT_MT_jopamenu'
-    # bl_category = 'Jopa menu'
-    # bl_space_type = 'VIEW_3D'
-    # bl_region_type = 'UI'
+class SomeJopaClass(bpy.types.Operator):
+    bl_idname = 'object.some_maker'
+    bl_label = 'jopa maker script'
+    bl_options = {'REGISTER', 'UNDO'}
+    bl_property = 'my_enum'
 
-    def draw(self, context):
-        layout = self.layout
-        layout.label(text='DOROU')
-        layout.operator('wm.jopa_operator')
-
-
-class SimpleJopaOperator(bpy.types.Operator):
-    bl_idname='wm.jopa_operator'
-    bl_label='invoke jopa operator'
-
-    x: bpy.props.IntProperty()
-    y: bpy.props.IntProperty()
-
-    @classmethod
-    def poll(cls, context):
-        return context.object is not None
+    my_enum: EnumProperty(
+        name="My Search",
+        items=(
+            ('FOO', "Foo", ""),
+            ('BAR', "Bar", ""),
+            ('BAZ', "Baz", ""),
+        ),
+    )
 
     def execute(self, context):
-        self.report({'INFO'}, f'mouse coords are: {self.x} {self.y}')
+        print(str(self))
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        self.x = event.mouse_x
-        self.y =event.mouse_y
-        return self.execute(context)
+        context.window_manager.invoke_search_popup(self)
+        return {'RUNNING_MODAL'}
 
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        col.prop(self, 'my_enum')
 
-bpy.utils.register_class(SimpleJopaOperator)
-bpy.utils.register_class(MrMenu)
+        col = layout.column()
+        col.label(text='some text here')
 
-# bpy.ops.wm.jopa_operator('INVOKE_DEFAULT')
-# bpy.ops.wm.jopa_operator('EXEC_DEFAULT')
-    
+bpy.utils.register_class(SomeJopaClass)
+
+bpy.ops.object.some_maker('INVOKE_DEFAULT')

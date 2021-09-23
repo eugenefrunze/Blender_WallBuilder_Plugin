@@ -1,6 +1,6 @@
 bl_info = {
     "name": "BBP",
-    "description": "Big blender Plugin for CREATIV7",
+    "description": "CRAFTOID",
     "author": "miloslavsky",
     "version": (0, 1, 00),
     "blender": (2, 93, 0),

@@ -391,7 +391,7 @@ class TileGenerator(bpy.types.Operator):
         bpy.ops.mesh.extrude_region_move(
             MESH_OT_extrude_region={"use_normal_flip": False, "use_dissolve_ortho_edges": False, "mirror": False},
             TRANSFORM_OT_translate={"value": (0, 0, 5), "orient_type": 'GLOBAL',
-                                    "orient_matrix": ((1, 0, 0), (0, 1, 0), (0, 0, 1)), "orient_matrix_type": 'GLOBAL',
+                                    "orient_matrix_type": 'GLOBAL',
                                     "constraint_axis": (False, False, True), "mirror": False,
                                     "use_proportional_edit": False, "proportional_edit_falloff": 'SMOOTH',
                                     "proportional_size": 1, "use_proportional_connected": False,
