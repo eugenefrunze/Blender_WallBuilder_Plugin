@@ -13,14 +13,16 @@ import bpy
 import sys
 import importlib
 
+from bpy.types import NodesModifier
+
 #append folder
 sys.path.append('C:\\code\\big_blender_plugin\\wall_builder')
 import data_types
 
 import panel
-import builder_operator
+import wb_operators
 importlib.reload(panel)
-importlib.reload(builder_operator)
+importlib.reload(wb_operators)
 
 
 
@@ -51,10 +53,25 @@ def register():
         default=0
         )
 
+    bpy.types.Object.opening_type = bpy.props.EnumProperty(
+        name='opening type',
+        items=data_types.openings_types
+    )
+
+    bpy.types.Object.opening_top_offset = bpy.props.FloatProperty(
+        name='opening top offset',
+        default=0
+    )
+
+    bpy.types.Object.level = bpy.props.IntProperty(
+        name='object level',
+        default=0
+    )
+
     
     classes = [
         panel.MainMenu,
-        builder_operator.WallBuilder
+        wb_operators.WallBuilder
     ]
     for cls in classes:
         bpy.utils.register_class(cls)

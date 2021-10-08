@@ -29,3 +29,9 @@ objects_names = (
     'wall_outer',
     'wall_inner',
 )
+
+openings_types = (
+    ('WINDOW1', 'window 1', ''),
+    ('DOOR1', 'door 1', ''),
+
+)

@@ -194,6 +194,8 @@ class RoofDimensionsCalculator(bpy.types.Operator):
             if poly.select:
                 selected_polys.append(poly.index)
 
+        print('SLAVA KPSS!!!')
+
         self.report({'INFO'}, f'SELECTED POLYS INDICES: {selected_polys}')
         return {'FINISHED'}
 

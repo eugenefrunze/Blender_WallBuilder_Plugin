@@ -1,6 +1,6 @@
 import bpy
 import data_types
-import builder_operator
+import wb_operators
 
 class MainMenu(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_MainMenu'
@@ -29,6 +29,12 @@ class MainMenu(bpy.types.Panel):
                 row.label(text=param)
 
             row = col.row()
-            props = row.operator(builder_operator.WallBuilder.bl_idname)
+            props = row.operator(wb_operators.WallBuilder.bl_idname)
+
+            col = layout.column()
+            
+            row = col.row()
+            row.label(text='object\'s props editor')
 
             row = col.row()
+            row.prop(context.object, 'opening_type')
