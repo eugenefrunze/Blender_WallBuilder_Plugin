@@ -27,7 +27,8 @@ class WallBuilder(bpy.types.Operator):
         source_object.select_set(True)
         context.view_layer.objects.active = source_object
         if debug:
-            print('AAaAAAAA');
+            print('AAaAAAAA')
+            print('BbBBbbBb')
 
     def execute(self, context):
         original_curve_object: bpy.types.Object = context.object
