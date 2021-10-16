@@ -15,7 +15,7 @@ class MainMenu(bpy.types.Panel):
             col = layout.column()
 
             row = col.row()
-            row.label(text='building object: {} ({})'.format(context.object.name, context.object.type))
+            row.label(text='active object: {} ({})'.format(context.object.name, context.object.type))
 
             col = layout.column()
 
