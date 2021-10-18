@@ -37,6 +37,8 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    wb_properties.register()
+
 def unregister():
     bpy.utils.unregister_class(panel.MainMenu)
 

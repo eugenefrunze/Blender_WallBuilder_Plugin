@@ -1,8 +1,10 @@
 import bpy
 import data_types
 
-def register():
+# class WBProperties(bpy.types.PropertyGroup):
 
+def register():
+    
     bpy.types.Object.customer = bpy.props.EnumProperty(
             name='customer preset',
             items=data_types.customers
@@ -44,15 +46,7 @@ def register():
         )
 
 def unregister():
-
-    del bpy.types.Object.level
-    del bpy.types.Object.opening_top_offset
-    del bpy.types.Object.opening_type
-    del bpy.types.Object.opening_elevation
-    del bpy.types.Object.wall_height
-    del bpy.types.Object.inner_wall_thickness
-    del bpy.types.Object.outer_wall_thickness
-    del bpy.types.Object.customer
+    pass
 
 if __name__ == '__main__':
     register()
