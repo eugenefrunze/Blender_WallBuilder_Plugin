@@ -1,6 +1,8 @@
+from bpy import types
+
+
 properties = (
-    'outer_wall_thickness',
-    'inner_wall_thickness', #replace with just thickness, no outer and inner
+    'thickness', #replace with just thickness, no outer and inner 
     'wall_height',
     'opening_elevation',
     'opening_top_offset',
@@ -24,10 +26,10 @@ levels = {
     'DG' : 'last floor'
 }
 
-objects_names = (
-    'floor',
-    'wall_outer',
-    'wall_inner',
+objects_types = (
+    ('WALL', 'wall', ''),
+    ('FLOOR', 'floor', ''),
+    ('OPENING', 'opening', '')
 )
 
 openings_types = (
