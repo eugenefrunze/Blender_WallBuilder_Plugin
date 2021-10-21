@@ -1,52 +1,73 @@
+import types
 import bpy
 import data_types
 
-# class WBProperties(bpy.types.PropertyGroup):
+from bpy.props import PointerProperty, EnumProperty, FloatProperty, BoolProperty, \
+    IntProperty, FloatVectorProperty, CollectionProperty, StringProperty
 
-def register():
-    
-    bpy.types.Object.customer = bpy.props.EnumProperty(
+class WBProps(bpy.types.PropertyGroup):
+    customer: EnumProperty(
             name='customer preset',
             items=data_types.customers
         )
 
-    bpy.types.Object.outer_wall_thickness = bpy.props.FloatProperty(
-            name='outer wall thickness',
+    object_type: EnumProperty(
+        name='object type',
+        items=data_types.objects_types,
+        default='WALL'
+    )
+    
+    position: EnumProperty(
+        name='position',
+        items=(
+            ('INSIDE', 'Inside', ''),
+            ('CENTER', 'Center', ''),
+            ('OUTSIDE', 'Outside', '')
+            ),
+        default='INSIDE'
+        )
+
+    thickness: FloatProperty(
+            name='wall thickness',
             default=0
         )
 
-    bpy.types.Object.inner_wall_thickness = bpy.props.FloatProperty(
-            name='inner wall thickness',
-            default=0
-        )
-
-    bpy.types.Object.wall_height = bpy.props.FloatProperty(
+    wall_height: FloatProperty(
             name='wall height',
             default=0
         )
 
-    bpy.types.Object.opening_elevation = bpy.props.FloatProperty(
-            name='openings aver elevation',
+    opening_elevation: FloatProperty(
+            name='openings average elevation',
             default=0
             )
 
-    bpy.types.Object.opening_type = bpy.props.EnumProperty(
+    opening_type: EnumProperty(
             name='opening type',
             items=data_types.openings_types
         )
 
-    bpy.types.Object.opening_top_offset = bpy.props.FloatProperty(
+    opening_top_offset: FloatProperty(
             name='opening top offset',
             default=0
         )
 
-    bpy.types.Object.level = bpy.props.IntProperty(
+    level: IntProperty(
             name='object level',
             default=0
         )
 
+    
+
+def register():
+    from bpy.utils import register_class
+    register_class(WBProps)
+
+    bpy.types.Object.wall_builder_props = bpy.props.PointerProperty(type=WBProps)
+
 def unregister():
-    pass
+    from bpy.utils import unregister_class
+    unregister_class(WBProps)
 
 if __name__ == '__main__':
     register()

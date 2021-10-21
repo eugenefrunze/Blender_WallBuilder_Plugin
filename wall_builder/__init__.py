@@ -13,34 +13,30 @@ import bpy
 import sys
 import importlib
 
-from bpy.types import NodesModifier
-
 #append folder
+sys.path.append('C:\\code\\big_blender_plugin')
 sys.path.append('C:\\code\\big_blender_plugin\\wall_builder')
 import data_types
 
 import wb_properties
-import panel
+import wb_panel
 import wb_operators
-importlib.reload(panel)
+importlib.reload(wb_panel)
 importlib.reload(wb_operators)
 importlib.reload(wb_properties)
 
 
 
 def register():
-    
-    classes = [
-        panel.MainMenu,
-        wb_operators.WallBuilder,
-    ]
-    for cls in classes:
-        bpy.utils.register_class(cls)
-
     wb_properties.register()
+    wb_panel.register()
+    wb_operators.register()
+    
 
 def unregister():
-    bpy.utils.unregister_class(panel.MainMenu)
+    wb_properties.unregister()
+    wb_panel.unregister()
+    wb_operators.unregister()
 
 if __name__ == "__main__":
     register()
