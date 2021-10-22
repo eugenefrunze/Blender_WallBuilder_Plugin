@@ -44,9 +44,19 @@ class WallBuilder(bpy.types.Operator):
             modifier = obj.modifiers.new('wb_geom_nodes', 'NODES')
             node_group = modifier.node_group
             node_group.name = '{}_wb_node_group'.format(obj.name)
-
             
-            node_curve_to_mesh = node_group.nodes.new(type='GeometryNodeCurveToMesh')
+            #creating new nodes
+            nd_curve_to_mesh = node_group.nodes.new(type='GeometryNodeCurveToMesh')
+            nd_quadrilateral = node_group.nodes.new(type='GeometryNodeCurvePrimitiveQuadrilateral')
+            nd_input = node_group.nodes['Group Input']
+            nd_output = node_group.nodes['Group Output']
+            # setting the parameters
+            nd_quadrilateral.mode = 'POINTS'
+            # clear default outputs
+            nd_input.outputs.clear()
+            nd_output.outputs.clear()
+            # assigning links
+            node_group.links.new(nd_input.outputs['Geometry'], nd_curve_to_mesh.inputs['Curve'])
 
 
 
