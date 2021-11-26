@@ -7,7 +7,8 @@ plugin_scripts_list = (
 'floorplans_tools.py',
 'custom_UI',
 'python_plain.py',
+'python_plain_2.py',
 '__init__.py' #wall builder directory only
 )
 
-exec(open(os.path.join(os.path.dirname(bpy.data.filepath), plugin_scripts_list[5])).read())
+exec(open(os.path.join(os.path.dirname(bpy.data.filepath), plugin_scripts_list[6])).read())

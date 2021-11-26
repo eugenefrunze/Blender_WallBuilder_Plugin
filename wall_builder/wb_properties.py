@@ -5,6 +5,11 @@ import data_types
 from bpy.props import PointerProperty, EnumProperty, FloatProperty, BoolProperty, \
     IntProperty, FloatVectorProperty, CollectionProperty, StringProperty
 
+class WBSceneProps(bpy.types.PropertyGroup):
+    plans_collection: PointerProperty(
+        type=bpy.types.Collection,
+        name='wb objects',)
+
 class WBProps(bpy.types.PropertyGroup):
     customer: EnumProperty(
             name='customer preset',
@@ -16,6 +21,16 @@ class WBProps(bpy.types.PropertyGroup):
         items=data_types.objects_types,
         default='WALL'
     )
+
+    level: EnumProperty(
+        name='object level',
+        # items = data_types.levels # ------------------------------------ FIX THIS!!!!!!!!!!!!!!
+        items =(
+           ('KG', 'KG (basement)', ''),
+           ('EG', 'EG (1st floor)', ''),
+           ('OG', 'OG (2nd floor)', ''),
+           ('DG', 'DG (last floor)', '')),
+        )
     
     position: EnumProperty(
         name='position',
@@ -32,13 +47,18 @@ class WBProps(bpy.types.PropertyGroup):
             default=0
         )
 
-    wall_height: FloatProperty(
-            name='wall height',
+    height: FloatProperty(
+            name='height',
             default=0
         )
 
     opening_elevation: FloatProperty(
             name='openings average elevation',
+            default=0
+            )
+
+    elevation: FloatProperty(
+            name='object global elevation',
             default=0
             )
 
@@ -52,22 +72,26 @@ class WBProps(bpy.types.PropertyGroup):
             default=0
         )
 
-    level: IntProperty(
-            name='object level',
-            default=0
-        )
+    align_marker: PointerProperty(
+        type=bpy.types.Object,
+        name='align marker')
 
-    
 
 def register():
     from bpy.utils import register_class
     register_class(WBProps)
+    register_class(WBSceneProps)
 
     bpy.types.Object.wall_builder_props = bpy.props.PointerProperty(type=WBProps)
+
+
+    bpy.types.Scene.wall_builder_scene_props = bpy.props.PointerProperty(type=WBSceneProps)
 
 def unregister():
     from bpy.utils import unregister_class
     unregister_class(WBProps)
+    unregister_class(WBSceneProps)
+
 
 if __name__ == '__main__':
     register()

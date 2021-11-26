@@ -1,8 +1,12 @@
-from bpy import types
-
+position = (
+    'outside', 
+    'center',
+    'outside'
+)
 
 properties = (
-    'thickness', #replace with just thickness, no outer and inner 
+    'thickness',
+    'position',
     'wall_height',
     'opening_elevation',
     'opening_top_offset',
@@ -19,12 +23,12 @@ customers_params = {
     'bodenseehaus' : {0.25, 0.2, 2.9}
 }
 
-levels = {
-    'KG' : 'basement',
-    'OG' : '2nd floor',
-    'EG' : '1st floor',
-    'DG' : 'last floor'
-}
+levels = (
+    ('KG', 'basement (KG)', ''),
+    ('OG', '2nd floor (OG)', ''),
+    ('EG', '1st floor (EG)', ''),
+    ('DG', 'last floor (DG)', '')
+)
 
 objects_types = (
     ('WALL', 'wall', ''),
@@ -35,5 +39,4 @@ objects_types = (
 openings_types = (
     ('WINDOW1', 'window 1', ''),
     ('DOOR1', 'door 1', ''),
-
 )
