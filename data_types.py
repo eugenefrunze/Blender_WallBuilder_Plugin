@@ -30,13 +30,42 @@ levels = (
     ('DG', 'last floor (DG)', '')
 )
 
-objects_types = (
-    ('WALL', 'wall', ''),
-    ('FLOOR', 'floor', ''),
-    ('OPENING', 'opening', '')
-)
+class Objects_types:
+
+    type: str
+    name: str
+    desc: str
+    subtype: object
+
+    def __init__(self, type='', name='', desc='', subtype=None):
+        self.type = type
+        self.name = name
+        self.desc = desc
+        self.subtype = subtype
+
+    def get_prop_enum(self):
+        return (self.type, self.name, self.desc)
+
+
+def get_openings_types():
+    wall = Objects_types('WALL', 'Wall', 'Wall desc')
+    floor = Objects_types('FLOOR', 'Floor', 'Floor desc')
+    opening = Objects_types('OPENING', 'Opening', 'Floor desc')
+
+    return (wall.get_prop_enum(), floor.get_prop_enum(), opening.get_prop_enum())
 
 openings_types = (
     ('WINDOW1', 'window 1', ''),
     ('DOOR1', 'door 1', ''),
 )
+
+def register():
+    from bpy.utils import register_class
+    register_class(Objects_types)
+
+def unregister():
+    from bpy.utils import unregister_class
+    unregister_class(Objects_types)
+
+if __name__ == '__main__':
+    register()

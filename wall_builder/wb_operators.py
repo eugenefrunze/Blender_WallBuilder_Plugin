@@ -1,8 +1,7 @@
 import bpy
 from bpy.props import CollectionProperty, IntProperty, StringProperty
+from bpy.types import DepsgraphObjectInstance, Object
 import data_types
-
-
 
 class WallBuilder(bpy.types.Operator):
     bl_idname = 'object.wall_builder'
@@ -17,7 +16,7 @@ class WallBuilder(bpy.types.Operator):
 
     @staticmethod
     def debug_method(message: str):
-        print('==============================================')
+        print('>>============================================')
         print(message)
         print('----------------------------------------------')
 
@@ -48,7 +47,7 @@ class WallBuilder(bpy.types.Operator):
         return points[position]
 
     @staticmethod
-    def generate_object(obj: bpy.types.Object) -> tuple():
+    def generate_object_old(obj: bpy.types.Object) -> tuple():
         if obj.wall_builder_props.object_type == 'WALL':
 
             try:
@@ -449,10 +448,38 @@ class WallBuilder(bpy.types.Operator):
             print('this guy has a mod')
             obj.modifiers.remove(modifier)
 
+    def generate_object(self, context) -> list:
+        obj_converted = context.object
+        if obj_converted.wall_builder_props.object_type == 'WALL':
+            obj_converted.name = 'wb_wall'
+
+            bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=1, use_cyclic_u=True)
+            obj_profile = context.object
+            bpy.ops.curve.spline_type_set(type='POLY')
+            obj_profile_data = obj_profile.data
+            obj_profile.name = f'{obj_converted.name}_profile'
+            #saving the profile context
+            ctx_wall_profile = context.copy()
+
+            #get all points
+            points_height_co = []
+            for point in obj_profile_data.splines[0].points:
+                points_height_co.append(point)
+
+            return points_height_co
+
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None and context.object.type == 'CURVE'
 
     def execute(self, context):
-        # add geom nodes modifier to outside walls
-        WallBuilder.generate_object(bpy.context.object)
+        if True:
+            co_s = self.generate_object(context)
+            self.debug_method(co_s)
+            
+        else:
+            # add geom nodes modifier to outside walls 
+            WallBuilder.generate_object(bpy.context.object)
 
         self.report({'INFO'}, 'WALL BUILDER: {}'.format(self.bl_label))
         return {'FINISHED'}

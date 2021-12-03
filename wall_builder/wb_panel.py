@@ -88,8 +88,12 @@ class WBPanel(bpy.types.Panel):
 
             row=col.row()
             row.label(text='GLOBAL PROPERTIES:')
+
             row=col.row()
-            row.prop(data=context.scene.wall_builder_scene_props,property='plans_collection', slider=True)      
+            plans_collection = row.prop(data=context.scene.wall_builder_scene_props,property='plans_collection', slider=True)     
+
+            row = col.row()
+            row.operator(wb_operators.BuildingAssembler.bl_idname, text='ASSEMBLE THE BUILDING') 
                 
 
 # openings item

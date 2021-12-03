@@ -18,8 +18,15 @@ class WBProps(bpy.types.PropertyGroup):
 
     object_type: EnumProperty(
         name='object type',
-        items=data_types.objects_types,
+        items=data_types.get_openings_types(),
         default='WALL'
+    )
+
+    is_converted: BoolProperty(
+        name='is converted',
+        description='is object already converter into a BBP object (ex. Wall, Opening etc.)',
+        default=False
+
     )
 
     level: EnumProperty(
