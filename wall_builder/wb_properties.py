@@ -1,6 +1,7 @@
 import types
 import bpy
 import data_types
+import wb_operators
 
 from bpy.props import PointerProperty, EnumProperty, FloatProperty, BoolProperty, \
     IntProperty, FloatVectorProperty, CollectionProperty, StringProperty
@@ -51,13 +52,20 @@ class WBProps(bpy.types.PropertyGroup):
 
     thickness: FloatProperty(
             name='wall thickness',
-            default=0
+            default=0,
+            update=wb_operators.WallBuilder.set_wall_position
         )
 
     height: FloatProperty(
             name='height',
-            default=0
+            default=0,
+            update=wb_operators.WallBuilder.set_wall_position
         )
+
+    wall_profile_curve: PointerProperty(
+        type=bpy.types.Object,
+        name='taper profile for the wall'
+    )
 
     opening_elevation: FloatProperty(
             name='openings average elevation',

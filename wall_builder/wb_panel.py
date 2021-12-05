@@ -41,35 +41,35 @@ class WBPanel(bpy.types.Panel):
                 #geom nodes props
                 row = col.row()
                 modif_geom_nodes = context.object.modifiers.get('wb_geom_nodes')
-                if modif_geom_nodes:
-                    row = col.row(align=True)
-                    row.prop(modif_geom_nodes, '["Input_2"]', text='thickness')
-                    row.prop(modif_geom_nodes, '["Input_3"]', text='height')
-                    row = col.row()
-                    row.prop(modif_geom_nodes, '["Input_4"]', text='position')
-                    row = col.row()
+                
+                row = col.row()
+                row.prop(context.object.wall_builder_props, 'height')
+                
+                row = col.row()
+                row.prop(context.object.wall_builder_props, 'thickness')
 
-                    #openings list
-                    scn = bpy.context.scene
-
+                if context.object.data.bevel_object:
                     row = col.row()
-                    row.template_list('OBJECT_UL_openingsItem', '', bpy.context.scene, 'custom', bpy.context.scene, 'custom_index', rows=1)
-
-                    row = col.row(align=True)
-                    row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
-                    row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
-                    row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
-                    row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
-
-                    row = col.row()
-                    bo = row.prop(context.object.wall_builder_props, 'align_marker')
-
-                    #resetter
-                    row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL').reset_object == True
+                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL').reset_object = True
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX').reset_object == False
+                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX').reset_object = False
+
+                    #openings list
+                    # scn = bpy.context.scene
+
+                    # row = col.row()
+                    # row.template_list('OBJECT_UL_openingsItem', '', bpy.context.scene, 'custom', bpy.context.scene, 'custom_index', rows=1)
+
+                    # row = col.row(align=True)
+                    # row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
+                    # row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
+                    # row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
+                    # row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
+
+                    # row = col.row()
+                    # bo = row.prop(context.object.wall_builder_props, 'align_marker')
+                    
 
 
             #IF OPENING

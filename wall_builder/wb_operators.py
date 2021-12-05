@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import CollectionProperty, IntProperty, StringProperty
-from bpy.types import DepsgraphObjectInstance, Object
 import data_types
 
 class WallBuilder(bpy.types.Operator):
@@ -8,43 +7,15 @@ class WallBuilder(bpy.types.Operator):
     bl_label = 'GANERATOR HANDLER'
     bl_options = {'REGISTER', 'UNDO'}
 
-    #TEMP ELEMENTS
-    FLOOR_HEIGHT = 0.15
-    WALL_HEIGHT = 0
-
     reset_object: bpy.props.BoolProperty()
+
+    wall_profile_curve: bpy.types.Object
 
     @staticmethod
     def debug_method(message: str):
         print('>>============================================')
         print(message)
         print('----------------------------------------------')
-
-    @staticmethod
-    def get_profile_shape(position: str):
-        
-        points = {
-            'OUTSIDE' : (
-                (0, 0, 0),
-                (-1, 0, 0),
-                (-1, -1, 0),
-                (0, -1, 0) 
-            ),
-            'CENTER' : (
-                (0.5, 0, 0),
-                (-0.5, 0, 0),
-                (-0.5, -1, 0),
-                (0.5, -1, 0)
-            ),
-            'INSIDE' : (
-                (0, 0, 0),
-                (1, 0, 0),
-                (1, -1, 0),
-                (0, -1, 0)
-            )
-        }
-
-        return points[position]
 
     @staticmethod
     def generate_object_old(obj: bpy.types.Object) -> tuple():
@@ -443,46 +414,135 @@ class WallBuilder(bpy.types.Operator):
                 spline.use_cyclic_u = True
             obj.data.extrude = obj.wall_builder_props.height / 2
 
-    def reset_object(obj: bpy.types.Object, modifier):
-        if obj.wall_builder_props.object_type == 'WALL':
-            print('this guy has a mod')
-            obj.modifiers.remove(modifier)
+
+    def set_wall_position(self, context):
+        if self.__class__.__name__ == 'WBProps':
+            print(self.__class__.__name__)
+        elif self.__class__.__name__ == 'WallBuilder':
+            print(self.__class__.__name__)
+            return None
+
+        points = []
+        for point in context.active_object.data.bevel_object.data.splines[0].points:
+            points.append(point)
+
+        if context.object.wall_builder_props.position == 'INSIDE':
+
+            points[0].co[0] = 0
+            points[0].co[1] = self.height
+
+            points[1].co[0] = self.thickness
+            points[1].co[1] = self.height
+
+            points[2].co[0] = self.thickness
+            points[2].co[1] = 0
+
+            points[3].co[0] = 0
+            points[3].co[1] = 0
+
+            # context.active_object.data.bevel_object.data.splines[0].points[0].co[0] = 0
+            # context.active_object.data.bevel_object.data.splines[0].points[0].co[1] = self.height
+
+            # context.active_object.data.bevel_object.data.splines[0].points[1].co[0] = self.thickness
+            # context.active_object.data.bevel_object.data.splines[0].points[1].co[1] = self.height
+
+            # context.active_object.data.bevel_object.data.splines[0].points[2].co[0] = self.thickness
+            # context.active_object.data.bevel_object.data.splines[0].points[2].co[1] = 0
+
+            # context.active_object.data.bevel_object.data.splines[0].points[3].co[0] = 0
+            # context.active_object.data.bevel_object.data.splines[0].points[3].co[1] = 0
+
+            print('ME INSIDE')
+            pass
+        elif context.object.wall_builder.props.position == 'CENTER':
+            print('ME CENTER')
+
+            pass
+        elif context.object.wall_builder_props.position == 'OUTSIDE':
+            print('ME OUTSIDE')
+            pass
+        
+    
+    def change_wall_height(self, context):
+        print('hello me changed')
 
     def generate_object(self, context) -> list:
         obj_converted = context.object
+        # obj_converted.wall_builder_props.is_converted = True ----- DO I NEED THAT "IS_CONVERTED"?
         if obj_converted.wall_builder_props.object_type == 'WALL':
             obj_converted.name = 'wb_wall'
 
-            bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=1, use_cyclic_u=True)
+
+            bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
-            bpy.ops.curve.spline_type_set(type='POLY')
+            obj_converted.wall_builder_props.wall_profile_curve = obj_profile
+            obj_profile.name = f'{obj_converted.name}_taper'
             obj_profile_data = obj_profile.data
-            obj_profile.name = f'{obj_converted.name}_profile'
+            obj_profile_data.fill_mode = 'NONE'
+            bpy.ops.curve.spline_type_set(type='POLY')
+
+            points = []
+            for point in obj_profile_data.splines[0].points:
+                points.append(point)
+
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.select_all(action='DESELECT')
+            context.view_layer.objects.active = obj_converted
+            obj_converted.data.bevel_mode = 'OBJECT'
+            obj_converted.data.bevel_object = obj_profile
+
+            self.set_wall_position(context)
+
+
+            # context.object.select_set(True)
+
+
+            # deprecated - has to be replaces with set_wall_position() function
+            # bpy.ops.transform.translate(value=(0.5, 0.5, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL')
             #saving the profile context
-            ctx_wall_profile = context.copy()
+            # ctx_wall_profile = context.copy()
 
             #get all points
-            points_height_co = []
-            for point in obj_profile_data.splines[0].points:
-                points_height_co.append(point)
+            
 
-            return points_height_co
+            # obj_converted.wall_builder_props.height = points[0].co[1]
+
+            # return points
+
+    def reset_converted_object(self, obj: bpy.types.Object):
+        if obj.wall_builder_props.object_type == 'WALL':
+            obj.data.bevel_object = None
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.wall_builder_props.wall_profile_curve.select_set(True)
+            bpy.ops.object.delete()
+            obj.select_set(True)
+            obj.wall_builder_props.wall_profile_curve = None
+            
+
 
     @classmethod
     def poll(cls, context):
         return context.object is not None and context.object.type == 'CURVE'
 
     def execute(self, context):
-        if True:
-            co_s = self.generate_object(context)
-            self.debug_method(co_s)
-            
-        else:
-            # add geom nodes modifier to outside walls 
-            WallBuilder.generate_object(bpy.context.object)
+        if self.reset_object:
+            self.reset_converted_object(context.object)
 
-        self.report({'INFO'}, 'WALL BUILDER: {}'.format(self.bl_label))
-        return {'FINISHED'}
+            self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
+            return {'FINISHED'}
+        else:
+            print(self.reset_object)
+            self.generate_object(context)
+
+            self.report({'INFO'}, 'OBJECT GENERATED')
+            return {'FINISHED'}
+        
+
+
+
+
+
+
 
 class BuildingAssembler(bpy.types.Operator):
     bl_idname = 'object.building_assembler'
