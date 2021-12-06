@@ -13,7 +13,7 @@ import bpy
 import sys
 import importlib
 
-#append folder
+#append folders
 sys.path.append('C:\\code\\big_blender_plugin')
 sys.path.append('C:\\code\\big_blender_plugin\\wall_builder')
 
@@ -21,18 +21,18 @@ import data_types
 import wb_properties
 import wb_panel
 import wb_operators
+import utils
 importlib.reload(data_types)
 importlib.reload(wb_panel)
 importlib.reload(wb_operators)
 importlib.reload(wb_properties)
-
+importlib.reload(utils)
 
 
 def register():
     wb_properties.register()
     wb_panel.register()
     wb_operators.register()
-    
 
 def unregister():
     wb_properties.unregister()

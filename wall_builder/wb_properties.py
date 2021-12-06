@@ -1,44 +1,38 @@
-import types
 import bpy
 import data_types
 import wb_operators
+import utils
 
 from bpy.props import PointerProperty, EnumProperty, FloatProperty, BoolProperty, \
     IntProperty, FloatVectorProperty, CollectionProperty, StringProperty
 
+
+#props for the scene -------------------------------------------------------------------------------
 class WBSceneProps(bpy.types.PropertyGroup):
     plans_collection: PointerProperty(
         type=bpy.types.Collection,
         name='wb objects',)
 
+
+#BBP objects props ---------------------------------------------------------------------------------
 class WBProps(bpy.types.PropertyGroup):
+
     customer: EnumProperty(
-            name='customer preset',
-            items=data_types.customers
-        )
+        name='client preset',
+        items=utils.get_customers_json(),
+        update=wb_operators.WallBuilder.set_customer_preset
+    )
 
     object_type: EnumProperty(
         name='object type',
-        items=data_types.get_openings_types(),
+        items=data_types.get_objects_types(),
         default='WALL'
-    )
-
-    is_converted: BoolProperty(
-        name='is converted',
-        description='is object already converter into a BBP object (ex. Wall, Opening etc.)',
-        default=False
-
     )
 
     level: EnumProperty(
         name='object level',
-        # items = data_types.levels # ------------------------------------ FIX THIS!!!!!!!!!!!!!!
-        items =(
-           ('KG', 'KG (basement)', ''),
-           ('EG', 'EG (1st floor)', ''),
-           ('OG', 'OG (2nd floor)', ''),
-           ('DG', 'DG (last floor)', '')),
-        )
+        items=data_types.levels
+    )
     
     position: EnumProperty(
         name='position',
@@ -47,7 +41,8 @@ class WBProps(bpy.types.PropertyGroup):
             ('CENTER', 'Center', ''),
             ('OUTSIDE', 'Outside', '')
             ),
-        default='INSIDE'
+        default='INSIDE',
+        update=wb_operators.WallBuilder.set_wall_position
         )
 
     thickness: FloatProperty(

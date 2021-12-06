@@ -24,11 +24,6 @@ objects_types = (
     opening.get_prop_enum()
 )
 
-class Jopa():
-    def __init__(self, a):
-        self.a = a
-
-b = Jopa(5)
-
-print(b.a)
-print(Jopa.__name__)
+a = 5
+b = str(a)
+print(type(b))

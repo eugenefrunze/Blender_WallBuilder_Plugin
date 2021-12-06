@@ -1,33 +1,60 @@
-position = (
-    'outside', 
-    'center',
-    'outside'
-)
-
-properties = (
-    'thickness',
-    'position',
-    'wall_height',
-    'opening_elevation',
-    'opening_top_offset',
-    'level'
-)
+import bpy
 
 customers = [
-    ('strafe', 'strafe desc', ''),
-    ('bodenseehaus', 'boden desc', '')
+    {
+        'client_id': 0, 'client_name': 'common', 'wall_height': 2500, 'wall_out_thickness': 300,
+        'wall_in_thickness': 150, 'windows_top': 2140, 'foundation': 400, 'ceiling': 250
+    },
+    {
+        'client_id': 1, 'client_name': 'customer1', 'wall_height': 2500, 'wall_out_thickness': 300,
+        'wall_in_thickness': 150, 'windows_top': 2140, 'foundation': 400, 'ceiling': 250
+    },
+    {
+        'client_id': 2, 'client_name': 'customer2', 'wall_height': 2500, 'wall_out_thickness': 290,
+        'wall_in_thickness': 125, 'windows_top': 2400, 'foundation': 350, 'ceiling': 250
+    },
+    {
+        'client_id': 3, 'client_name': 'customer3', 'wall_height': 2500, 'wall_out_thickness': 320,
+        'wall_in_thickness': 150, 'windows_top': 2130, 'foundation': 350, 'ceiling': 250
+    },
+    {
+        'client_id': 4, 'client_name': 'customer4', 'wall_height': 2500, 'wall_out_thickness': 290,
+        'wall_in_thickness': 125, 'windows_top': 2140, 'foundation': 350, 'ceiling': 250
+    },
+    {
+        'client_id': 5, 'client_name': 'customer5', 'wall_height': 2500, 'wall_out_thickness': 320,
+        'wall_in_thickness': 150, 'windows_top': 2130, 'foundation': 350, 'ceiling': 250
+    }
 ]
 
-customers_params = {
-    'strafe' : {0.29, 0.12, 2.3},
-    'bodenseehaus' : {0.25, 0.2, 2.9}
-}
+customers_json = [
+    {
+        "ucm_id":"1", "mc_id":"0", "client_id":"0", "wall_height":"2500", "wall_out_thickness":"300",
+        "wall_in_thickness":"150", "windows_top":"2140", "foundation":"400", "ceiling":"250"
+    },
+    {
+        "ucm_id":"2", "mc_id":"1", "client_id":"0", "wall_height":"2500", "wall_out_thickness":"290",
+        "wall_in_thickness":"125", "windows_top":"2400", "foundation":"350", "ceiling":"250"
+    },
+    {
+        "ucm_id":"3","mc_id":"4","client_id":"0","wall_height":"2500","wall_out_thickness":"320",
+        "wall_in_thickness":"150","windows_top":"2130","foundation":"350","ceiling":"250"
+    },
+    {
+        "ucm_id":"4", "mc_id":"11", "client_id":"0", "wall_height":"2500", "wall_out_thickness":"290",
+        "wall_in_thickness":"125", "windows_top":"2140", "foundation":"350", "ceiling":"250"
+    },
+    {
+        "ucm_id":"5", "mc_id":"5", "client_id":"0", "wall_height":"2500", "wall_out_thickness":"320",
+        "wall_in_thickness":"150", "windows_top":"2130", "foundation":"350", "ceiling":"250"
+    }
+]
 
 levels = (
-    ('KG', 'basement (KG)', ''),
-    ('OG', '2nd floor (OG)', ''),
-    ('EG', '1st floor (EG)', ''),
-    ('DG', 'last floor (DG)', '')
+    ('KG', 'KG (basement)', ''),
+    ('EG', 'EG (1st floor)', ''),
+    ('OG', 'OG (2nd floor)', ''),
+    ('DG', 'DG (last floor)', '')
 )
 
 class Objects_types:
@@ -47,7 +74,7 @@ class Objects_types:
         return (self.type, self.name, self.desc)
 
 
-def get_openings_types():
+def get_objects_types():
     wall = Objects_types('WALL', 'Wall', 'Wall desc')
     floor = Objects_types('FLOOR', 'Floor', 'Floor desc')
     opening = Objects_types('OPENING', 'Opening', 'Floor desc')

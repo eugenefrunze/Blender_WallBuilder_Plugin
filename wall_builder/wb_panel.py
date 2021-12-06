@@ -1,4 +1,5 @@
 import bpy
+from bpy.props import RemoveProperty
 import data_types
 import wb_operators
 
@@ -9,9 +10,19 @@ class WBPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
+    # @classmethod
+    # def poll(cls, context):
+    #     pass
+
     def get_object_buttons(self, layout):
         row = layout.row()
         props = row.operator(wb_operators.WallBuilder.bl_idname)
+
+    # def draw_header(self, context):
+    #         layout = self.layout
+    #         layout.label(text="MY TEST HEADER")
+    #         layout.prop(context.object.wall_builder_props, 'height')
+
 
 
     def draw(self, context):
@@ -28,6 +39,9 @@ class WBPanel(bpy.types.Panel):
             col = layout.column()
             row = col.row()
             row.label(text='OBJECT PROPERTIES:')
+
+            row = col.row()
+            row.prop(context.object.wall_builder_props, 'customer')
 
             row = col.row()
             row.prop(context.object.wall_builder_props, 'object_type')
@@ -47,6 +61,9 @@ class WBPanel(bpy.types.Panel):
                 
                 row = col.row()
                 row.prop(context.object.wall_builder_props, 'thickness')
+
+                row = col.row()
+                row.prop(context.object.wall_builder_props, 'position', text='wall position (ex. photoshop stroke')
 
                 if context.object.data.bevel_object:
                     row = col.row()
