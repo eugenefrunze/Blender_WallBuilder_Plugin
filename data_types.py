@@ -6,11 +6,11 @@ customers = [
         'wall_in_thickness': 150, 'windows_top': 2140, 'foundation': 400, 'ceiling': 250
     },
     {
-        'client_id': 1, 'client_name': 'customer1', 'wall_height': 2500, 'wall_out_thickness': 300,
+        'client_id': 1, 'client_name': 'Streif-Haus', 'wall_height': 2500, 'wall_out_thickness': 300,
         'wall_in_thickness': 150, 'windows_top': 2140, 'foundation': 400, 'ceiling': 250
     },
     {
-        'client_id': 2, 'client_name': 'customer2', 'wall_height': 2500, 'wall_out_thickness': 290,
+        'client_id': 2, 'client_name': 'Bodenseehaus', 'wall_height': 2500, 'wall_out_thickness': 290,
         'wall_in_thickness': 125, 'windows_top': 2400, 'foundation': 350, 'ceiling': 250
     },
     {
@@ -84,6 +84,11 @@ def get_objects_types():
 openings_types = (
     ('WINDOW1', 'window 1', ''),
     ('DOOR1', 'door 1', ''),
+)
+
+wall_types = (
+    ('OUTER', 'Outer wall', ''),
+    ('INNER', 'Inner wall', '')
 )
 
 def register():

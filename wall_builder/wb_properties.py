@@ -29,6 +29,11 @@ class WBProps(bpy.types.PropertyGroup):
         default='WALL'
     )
 
+    is_inner_wall: BoolProperty(
+        name='is inner wall',
+        update=wb_operators.WallBuilder.set_customer_preset
+    )
+
     level: EnumProperty(
         name='object level',
         items=data_types.levels

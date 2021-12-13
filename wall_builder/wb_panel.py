@@ -50,6 +50,9 @@ class WBPanel(bpy.types.Panel):
             if context.object.wall_builder_props.object_type == 'WALL':
 
                 row = col.row()
+                row.prop(context.object.wall_builder_props, 'is_inner_wall')
+
+                row = col.row()
                 row.prop(context.object.wall_builder_props, 'level')
 
                 #geom nodes props
@@ -67,25 +70,33 @@ class WBPanel(bpy.types.Panel):
 
                 if context.object.data.bevel_object:
                     row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL').reset_object = True
+                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL').is_reset = True
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX').reset_object = False
+                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX').is_reset = False
 
-                    #openings list
-                    # scn = bpy.context.scene
+                #openings list
+                scn = bpy.context.scene
 
-                    # row = col.row()
-                    # row.template_list('OBJECT_UL_openingsItem', '', bpy.context.scene, 'custom', bpy.context.scene, 'custom_index', rows=1)
+                row = col.row()
+                row.template_list('OpeningsItem2', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
 
-                    # row = col.row(align=True)
-                    # row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
-                    # row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
-                    # row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
-                    # row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
+                row = col.row(align=True)
+                row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
+                row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
+                row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
+                row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
 
-                    # row = col.row()
-                    # bo = row.prop(context.object.wall_builder_props, 'align_marker')
+                row = col.row()
+                bo = row.prop(context.object.wall_builder_props, 'align_marker')
+
+                row = col.row()
+                row.operator('object.opnenings_adder', text='ADD OPENINGS').action = 'ADD'
+
+                row = col.row()
+                row.operator('object.opnenings_adder', text='REMOVE OPENING').action = 'REMOVE'
+
+
                     
 
 
@@ -114,12 +125,23 @@ class WBPanel(bpy.types.Panel):
                 
 
 # openings item
-class OBJECT_UL_openingsItem(bpy.types.UIList):
+class OpeningsItem(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         split = layout.split()
         split.label(text=f'opening idx: {index}')
-        #split.prop(item, 'name', text='', emboss='false', translate='false', icon='EXPERIMENTAL')
+        # split.prop(item, 'name', text='', emboss='false', translate='false', icon='EXPERIMENTAL')
         split.label(text=item.name, icon='EXPERIMENTAL')
+
+    def invoke(self, context, ivent):
+        pass
+
+# openings item
+class OpeningsItem2(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        split = layout.split()
+        split.label(text=f'opening idx: {index}')
+        # split.prop(item, 'name', text='', emboss='false', translate='false', icon='EXPERIMENTAL')
+        split.label(text=item.obj.name, icon='EXPERIMENTAL')
 
     def invoke(self, context, ivent):
         pass
@@ -128,7 +150,8 @@ class OBJECT_UL_openingsItem(bpy.types.UIList):
 # REGISTRATION
 
 classes = (WBPanel,
-            OBJECT_UL_openingsItem)
+            OpeningsItem,
+            OpeningsItem2)
 
 def register():
     from bpy.utils import register_class

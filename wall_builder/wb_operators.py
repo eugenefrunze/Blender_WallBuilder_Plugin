@@ -1,11 +1,59 @@
 from typing import Any
 import bpy
-from bpy.props import CollectionProperty, IntProperty, StringProperty
+from bpy.props import CollectionProperty, IntProperty, PointerProperty, StringProperty
 import data_types
-import utils
 import blf
+import gpu
+from gpu_extras.batch import batch_for_shader
+import utils
 
 from wall_builder.python_plain_3 import draw_callback_px
+
+#BLF TEXT DRAWING ----------------------------------------------------------------------------------
+
+class DrawLine():
+    def __init__(self):
+        self.handler = None
+
+    def draw(self, coords):
+        self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        self.shader.bind()
+        self.shader.uniform_float("color", (1, 1, 0, 1))
+        self.batch = batch_for_shader(self.shader, 'LINES', {"pos": coords})
+        self.batch.draw(self.shader)
+
+    def start_handler(self, context):
+        self.handler = bpy.types.SpaceView3D.draw_handler_add(self.draw, ([(0, 0, 0), context.object.location],), 'WINDOW', 'POST_VIEW')
+
+    def remove_handler(self):
+        bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
+
+class DrawTextClass():
+
+    def __init__(self, context):
+        self.handler = None
+
+    def draw_callback_px(self, context):
+        font_id = 0
+        blf.position(font_id, 1, 1, 0)
+        # blf.rotation(font_id, 90)
+        ui_scale = bpy.context.preferences.system.ui_scale
+        # blf.size(font_id, int(0 * bpy.context.preferences.view.ui_scale), int((72 * bpy.context.preferences.system.dpi)))
+        blf.size(font_id, 1, int((72 * bpy.context.preferences.system.dpi)))
+        blf.draw(font_id, context.object.name)
+
+    def draw(self, context):
+        self.handler = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback_px, (context,), 'WINDOW', 'POST_PIXEL')
+
+    def remove_handler(self, context):
+        bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
+
+#getting the DrawtTextClass from the namespace
+drawtextclass = DrawTextClass(bpy.context)
+dns = bpy.app.driver_namespace
+dns['drawtextclass'] = drawtextclass
+
+dns['drawlineobj'] = DrawLine()
 
 
 #WALL BUILDER --------------------------------------------------------------------------------------
@@ -14,25 +62,21 @@ class WallBuilder(bpy.types.Operator):
     bl_label = 'GANERATOR HANDLER'
     bl_options = {'REGISTER', 'UNDO'}
 
-    reset_object: bpy.props.BoolProperty()
+    is_reset: bpy.props.BoolProperty()
 
     wall_profile_curve: bpy.types.Object
 
     handler1 = 0
-
-    def draw_callback_px(self, context):
-        font_id = 0
-        blf.position(font_id, 2, 80, 0)
-        blf.size(font_id, 50, 72)
-        blf.draw(font_id, '')
-
 
     def set_customer_preset(self, context):
         obj_converted = context.object
         for customer in data_types.customers_json:
             if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
                 obj_converted.wall_builder_props.height = float(customer['wall_height']) / 1000
-                obj_converted.wall_builder_props.thickness = float(customer['wall_out_thickness']) / 1000
+                if self.is_inner_wall:
+                    obj_converted.wall_builder_props.thickness = float(customer['wall_in_thickness']) / 1000
+                else:
+                    obj_converted.wall_builder_props.thickness = float(customer['wall_out_thickness']) / 1000
                 
 
     def set_wall_position(self, context):
@@ -45,7 +89,7 @@ class WallBuilder(bpy.types.Operator):
             height = context.object.wall_builder_props.height
             thickness = context.object.wall_builder_props.thickness            
 
-        #getting references for all points of th ewallshape
+        #getting references for all points of the wallshape
         points = []
         for point in context.active_object.data.bevel_object.data.splines[0].points:
             points.append(point)
@@ -97,8 +141,30 @@ class WallBuilder(bpy.types.Operator):
         obj_converted = context.object
         obj_conv_collection = obj_converted.users_collection[0]
         if obj_converted.wall_builder_props.object_type == 'WALL':
-            obj_converted.name = 'wb_wall'
 
+            obj_converted.name = 'wb_wall'
+            obj_converted.data.dimensions = '2D'
+
+            #geometry nodes modifier
+            geom_nodes_mod = bpy.context.object.modifiers.new("wb_geom_nodes", 'NODES')
+            node_group = geom_nodes_mod.node_group
+            node_group.name = '{}_geom_nodes_node_group'.format(obj_converted.name)
+            #creating nodes
+            nd_input = node_group.nodes['Group Input']
+            nd_output = node_group.nodes['Group Output']
+            nd_set_shade_smooth = node_group.nodes.new(type="GeometryNodeSetShadeSmooth")
+            #setting params
+            nd_set_shade_smooth.inputs[2].default_value = False
+            #create links
+            nd_input.outputs.clear()
+            nd_output.outputs.clear()
+            utils.node_group_link(node_group, nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
+            utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.outputs['Geometry'])
+            # node_group.links.new(nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
+            # utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
+
+
+            #shape curve from here
             bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
             obj_converted.wall_builder_props.wall_profile_curve = obj_profile
@@ -115,8 +181,8 @@ class WallBuilder(bpy.types.Operator):
             #set the sizes of newly generated wall
             self.set_wall_position(context)
 
-            self.handler1 = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (None, None), 'WINDOW', 'POST_PIXEL')
-            print(self.handler1)
+
+
 
         elif obj_converted.wall_builder_props.object_type == 'OPENING':
             pass
@@ -125,8 +191,11 @@ class WallBuilder(bpy.types.Operator):
             pass
 
 
-    def reset_generated_object(self, obj: bpy.types.Object):
+    def reset_object(self, obj: bpy.types.Object):
         if obj.wall_builder_props.object_type == 'WALL':
+
+            bpy.context.object.modifiers.remove
+
             bpy.ops.object.mode_set(mode='OBJECT')
             obj.data.bevel_object = None
             bpy.ops.object.select_all(action='DESELECT')
@@ -134,9 +203,7 @@ class WallBuilder(bpy.types.Operator):
             bpy.ops.object.delete()
             obj.select_set(True)
             obj.wall_builder_props.wall_profile_curve = None
-
-            bpy.types.SpaceView3D.draw_handler_remove(self.handler1, 'WINDOW')
-            
+ 
 
     #CLASS METHODS HERE
     @classmethod
@@ -144,11 +211,28 @@ class WallBuilder(bpy.types.Operator):
         return context.object is not None and context.object.type == 'CURVE'
 
     def execute(self, context):
-        if self.reset_object:
-            self.reset_generated_object(context.object)
+        # dns = bpy.app.driver_namespace
+
+
+        # drawtextclass = dns.get('drawtextclass')
+        if self.is_reset:
+
+        #     if dns.get('drawlineobj').handler is not None:
+        #         dns.get('drawlineobj').remove_handler()
+        #         dns.get('drawlineobj').handler = None
+
+        #     if drawtextclass.handler is not None:
+        #         drawtextclass.remove_handler(context)
+        #         drawtextclass.handler = None
+            self.reset_object(context.object)
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
         else:
+            # if dns.get('drawlineobj').handler == None:
+            #     dns.get('drawlineobj').start_handler(context)
+
+            # if drawtextclass.handler == None:
+            #     drawtextclass.draw(context)
             self.generate_object(context)
             self.report({'INFO'}, 'OBJECT GENERATED')
             return {'FINISHED'}
@@ -209,7 +293,7 @@ class BuildingAssembler(bpy.types.Operator):
 
 
 #OPENINGS LIST HANDLER OPERATOR --------------------------------------------------------------------
-class OPENINGS_OT_actions(bpy.types.Operator):
+class OpeningsHandler(bpy.types.Operator):
     bl_idname = "custom.add_openings"
     bl_label = "List Actions"
     bl_description = "Move items up and down, add and remove"
@@ -264,10 +348,40 @@ class OPENINGS_OT_actions(bpy.types.Operator):
                 self.report({'INFO'}, "Nothing selected in the Viewport")
         return {"FINISHED"}
 
+class OpeningsAdder(bpy.types.Operator):
+    bl_idname = "object.opnenings_adder"
+    bl_label = "mrlist"
+
+    action: bpy.props.EnumProperty(
+        items=(
+            ('REMOVE', "Remove", ""),
+            ('ADD', "Add", "")))
+
+    def invoke(self, context, event):
+        obj = context.object
+        idx = obj.opening_index
+        if self.action == 'ADD':
+            obj.select_set(False)
+            for object in context.selected_objects:
+                item = obj.openings.add()
+                item.obj = object
+                item.obj_id = len(obj.openings)
+                obj.opening_index = len(obj.openings) - 1
+                print(item.obj.name)
+            return {'FINISHED'}
+
+        elif self.action == 'REMOVE':
+            obj.opening_index -= 1
+            obj.openings.remove(idx)
+            return {'FINISHED'}
 
 #OPENINGS LIST PROP GROUP (TEMP) -------------------------------------------------------------------
 class CUSTOM_objectCollection(bpy.types.PropertyGroup):
     obj_type: StringProperty()
+    obj_id: IntProperty()
+
+class OpeningsCollection(bpy.types.PropertyGroup):
+    obj: PointerProperty(type=bpy.types.Object)
     obj_id: IntProperty()
 
 
@@ -276,17 +390,24 @@ def register():
     register_class(WallBuilder)
     register_class(BuildingAssembler)
     register_class(CUSTOM_objectCollection)
-    register_class(OPENINGS_OT_actions)
+    register_class(OpeningsHandler)
+    register_class(OpeningsCollection)
+    register_class(OpeningsAdder)
 
     bpy.types.Scene.custom = CollectionProperty(type=CUSTOM_objectCollection)
     bpy.types.Scene.custom_index = IntProperty()
+
+    bpy.types.Object.openings = CollectionProperty(type=OpeningsCollection)
+    bpy.types.Object.opening_index = IntProperty()
 
 def unregister():
     from bpy.utils import unregister_class
     unregister_class(WallBuilder)
     unregister_class(BuildingAssembler)
     unregister_class(CUSTOM_objectCollection)
-    unregister_class(OPENINGS_OT_actions)
+    unregister_class(OpeningsHandler)
+    unregister_class(OpeningsCollection)
+    unregister_class(OpeningsAdder)
 
     del bpy.types.Scene.custom
     del bpy.types.Scene.custom_index
