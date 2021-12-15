@@ -17,6 +17,11 @@ class WBSceneProps(bpy.types.PropertyGroup):
 #BBP objects props ---------------------------------------------------------------------------------
 class WBProps(bpy.types.PropertyGroup):
 
+    is_converted: BoolProperty(
+        name='Is converted',
+        description='If object an Wall builder object'
+    )
+
     customer: EnumProperty(
         name='client preset',
         items=utils.get_customers_json(),

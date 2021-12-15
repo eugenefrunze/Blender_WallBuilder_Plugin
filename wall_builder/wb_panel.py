@@ -68,33 +68,31 @@ class WBPanel(bpy.types.Panel):
                 row = col.row()
                 row.prop(context.object.wall_builder_props, 'position', text='wall position (ex. photoshop stroke')
 
-                if context.object.data.bevel_object:
+                #CONVERT OR RESET THE OBJECT -------------------------------------------------------
+                if context.object.wall_builder_props.is_converted:
                     row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL').is_reset = True
+                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL')
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX').is_reset = False
+                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX')
 
-                #openings list
-                scn = bpy.context.scene
+                #IF OBJECT HAS OPENINGS ------------------------------------------------------------
+                if context.object.wall_builder_props.is_converted:
+                    scn = bpy.context.scene
 
-                row = col.row()
-                row.template_list('OpeningsItem2', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
+                    row = col.row()
+                    row.template_list('OpeningsItem2', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
 
-                row = col.row(align=True)
-                row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
-                row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
-                row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
-                row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
+                    row = col.row(align=True)
+                    row.operator('object.opnenings_adder', text='ADD OPENINGS').action = 'ADD'
+                    row.operator('object.opnenings_adder', text='REMOVE OPENING').action = 'REMOVE'
+                    # row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
+                    # row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
+                    row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
+                    row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
 
-                row = col.row()
-                bo = row.prop(context.object.wall_builder_props, 'align_marker')
-
-                row = col.row()
-                row.operator('object.opnenings_adder', text='ADD OPENINGS').action = 'ADD'
-
-                row = col.row()
-                row.operator('object.opnenings_adder', text='REMOVE OPENING').action = 'REMOVE'
+                    row = col.row()
+                    bo = row.prop(context.object.wall_builder_props, 'align_marker')
 
 
                     

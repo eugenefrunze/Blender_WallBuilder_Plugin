@@ -1,6 +1,8 @@
 from typing import Any
 import bpy
+from bpy.ops import node
 from bpy.props import CollectionProperty, IntProperty, PointerProperty, StringProperty
+from bpy.types import NodeGroup
 import data_types
 import blf
 import gpu
@@ -141,10 +143,9 @@ class WallBuilder(bpy.types.Operator):
         obj_converted = context.object
         obj_conv_collection = obj_converted.users_collection[0]
         if obj_converted.wall_builder_props.object_type == 'WALL':
-
+            #setting object base parameters
             obj_converted.name = 'wb_wall'
             obj_converted.data.dimensions = '2D'
-
             #geometry nodes modifier
             geom_nodes_mod = bpy.context.object.modifiers.new("wb_geom_nodes", 'NODES')
             node_group = geom_nodes_mod.node_group
@@ -153,17 +154,19 @@ class WallBuilder(bpy.types.Operator):
             nd_input = node_group.nodes['Group Input']
             nd_output = node_group.nodes['Group Output']
             nd_set_shade_smooth = node_group.nodes.new(type="GeometryNodeSetShadeSmooth")
+            nd_bool_openings = node_group.nodes.new(type="GeometryNodeMeshBoolean")
             #setting params
+            nd_output.location = (500, 0)
             nd_set_shade_smooth.inputs[2].default_value = False
+            nd_bool_openings.name = 'mrBoolshit'
+            nd_bool_openings.location = (300, -100)
             #create links
             nd_input.outputs.clear()
             nd_output.outputs.clear()
             utils.node_group_link(node_group, nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
-            utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.outputs['Geometry'])
-            # node_group.links.new(nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
-            # utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
-
-
+            utils.node_group_link(node_group, nd_set_shade_smooth.outputs['Geometry'], nd_bool_openings.inputs['Mesh 1'])
+            utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_bool_openings.outputs['Mesh'])
+            
             #shape curve from here
             bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
@@ -172,7 +175,6 @@ class WallBuilder(bpy.types.Operator):
             obj_profile_data = obj_profile.data
             obj_profile_data.fill_mode = 'NONE'
             bpy.ops.curve.spline_type_set(type='POLY')
-
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
             context.view_layer.objects.active = obj_converted
@@ -180,9 +182,6 @@ class WallBuilder(bpy.types.Operator):
             obj_converted.data.bevel_object = obj_profile
             #set the sizes of newly generated wall
             self.set_wall_position(context)
-
-
-
 
         elif obj_converted.wall_builder_props.object_type == 'OPENING':
             pass
@@ -193,9 +192,14 @@ class WallBuilder(bpy.types.Operator):
 
     def reset_object(self, obj: bpy.types.Object):
         if obj.wall_builder_props.object_type == 'WALL':
-
-            bpy.context.object.modifiers.remove
-
+            #remove the geom nodes modifier
+            try:
+                geom_nodes_mod = obj.modifiers['wb_geom_nodes']
+            except KeyError:
+                print('OBJECT HAD NO wb_geom_nodes MODIFIER')
+            else:
+                obj.modifiers.remove(geom_nodes_mod)
+            #deleting the profile curve
             bpy.ops.object.mode_set(mode='OBJECT')
             obj.data.bevel_object = None
             bpy.ops.object.select_all(action='DESELECT')
@@ -203,6 +207,8 @@ class WallBuilder(bpy.types.Operator):
             bpy.ops.object.delete()
             obj.select_set(True)
             obj.wall_builder_props.wall_profile_curve = None
+            #clearing the openings list
+
  
 
     #CLASS METHODS HERE
@@ -211,11 +217,10 @@ class WallBuilder(bpy.types.Operator):
         return context.object is not None and context.object.type == 'CURVE'
 
     def execute(self, context):
+        obj = context.object
         # dns = bpy.app.driver_namespace
-
-
         # drawtextclass = dns.get('drawtextclass')
-        if self.is_reset:
+        if obj.wall_builder_props.is_converted:
 
         #     if dns.get('drawlineobj').handler is not None:
         #         dns.get('drawlineobj').remove_handler()
@@ -224,7 +229,8 @@ class WallBuilder(bpy.types.Operator):
         #     if drawtextclass.handler is not None:
         #         drawtextclass.remove_handler(context)
         #         drawtextclass.handler = None
-            self.reset_object(context.object)
+            self.reset_object(obj)
+            obj.wall_builder_props.is_converted = False
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
         else:
@@ -234,6 +240,7 @@ class WallBuilder(bpy.types.Operator):
             # if drawtextclass.handler == None:
             #     drawtextclass.draw(context)
             self.generate_object(context)
+            obj.wall_builder_props.is_converted = True
             self.report({'INFO'}, 'OBJECT GENERATED')
             return {'FINISHED'}
 
@@ -357,21 +364,79 @@ class OpeningsAdder(bpy.types.Operator):
             ('REMOVE', "Remove", ""),
             ('ADD', "Add", "")))
 
+    def add_opening_to_geom_nodes(self, construction, opening, location):
+        '''construction - actual building element to add openings to'''
+        try:
+            modifier = construction.modifiers['wb_geom_nodes']
+        except KeyError:
+            print('CONSTRUCTION OBJECT HAS NO GEOM NODES MODIFIER')
+        else:
+            #getting node group if modif exists
+            node_group = modifier.node_group
+            #adding opening as object info node
+            info_node = node_group.nodes.new(type="GeometryNodeObjectInfo")
+            #setting the parameters
+            info_node.inputs[0].default_value = opening
+            info_node.transform_space = 'RELATIVE'
+            info_node.location = location
+            #create links
+            utils.node_group_link(node_group, info_node.outputs['Geometry'], node_group.nodes['mrBoolshit'].inputs['Mesh 2'])
+            return info_node
+
+
+    def remove_opening_from_geom_nodes(self, construction, info_obj: bpy.types.Object):
+        '''construction - actual building element to remove opening from, info_obj - actual opening 
+        object from the scene'''
+        try:
+            modifier = construction.modifiers['wb_geom_nodes']
+        except KeyError:
+            print('CONSTRUCTION OBJECT HAS NO GEOM NODES MODIFIER')
+        else:
+            node_group = modifier.node_group 
+            nodes = node_group.nodes
+            # nodes.remove(construction.openings.obj_id)
+            for node in nodes:
+                if node.type == 'OBJECT_INFO' and node.inputs[0].default_value == info_obj:
+                    nodes.remove(node)
+                    nd_bool_openings = node_group.nodes['mrBoolshit']
+                    nd_output = node_group.nodes['Group Output']
+                    utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_bool_openings.outputs['Mesh'])
+
+
+
+        
+
     def invoke(self, context, event):
+        '''nd_loc - initial location for the new obj info node'''
         obj = context.object
         idx = obj.opening_index
         if self.action == 'ADD':
             obj.select_set(False)
+            nd_loc = [0, -200]
             for object in context.selected_objects:
+                #check if opening is a duplicate
+                if len(obj.openings) > 0:
+                    for opening in obj.openings:
+                        if object == opening.obj:
+                            self.report({'WARNING'}, 'This object is already in the openings')
+                            return {'CANCELLED'}
+                #create new opening
                 item = obj.openings.add()
                 item.obj = object
                 item.obj_id = len(obj.openings)
                 obj.opening_index = len(obj.openings) - 1
-                print(item.obj.name)
+                #putting the object to geom nodes modif
+                self.add_opening_to_geom_nodes(obj, object, nd_loc)
+                nd_loc[1] -= 200
+                print(f'OPENING ADDED: {item.obj.name}')
             return {'FINISHED'}
 
         elif self.action == 'REMOVE':
             obj.opening_index -= 1
+            #deleting object from geom nodes modifier and refreshing geom nodes modifier
+            self.remove_opening_from_geom_nodes(obj, obj.openings[idx].obj)
+
+            #removing opening from construction object
             obj.openings.remove(idx)
             return {'FINISHED'}
 
@@ -385,6 +450,7 @@ class OpeningsCollection(bpy.types.PropertyGroup):
     obj_id: IntProperty()
 
 
+#REGISTERING ---------------------------------------------------------------------------------------
 def register():
     from bpy.utils import register_class
     register_class(WallBuilder)
