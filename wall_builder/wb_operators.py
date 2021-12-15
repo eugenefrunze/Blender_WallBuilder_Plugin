@@ -1,4 +1,3 @@
-from typing import Any
 import bpy
 from bpy.ops import node
 from bpy.props import CollectionProperty, IntProperty, PointerProperty, StringProperty
@@ -8,8 +7,6 @@ import blf
 import gpu
 from gpu_extras.batch import batch_for_shader
 import utils
-
-from wall_builder.python_plain_3 import draw_callback_px
 
 #BLF TEXT DRAWING ----------------------------------------------------------------------------------
 
@@ -72,71 +69,76 @@ class WallBuilder(bpy.types.Operator):
 
     def set_customer_preset(self, context):
         obj_converted = context.object
-        for customer in data_types.customers_json:
-            if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
-                obj_converted.wall_builder_props.height = float(customer['wall_height']) / 1000
-                if self.is_inner_wall:
-                    obj_converted.wall_builder_props.thickness = float(customer['wall_in_thickness']) / 1000
-                else:
-                    obj_converted.wall_builder_props.thickness = float(customer['wall_out_thickness']) / 1000
-                
+        if obj_converted.wall_builder_props.object_type == 'WALL':
+            for customer in data_types.customers_json:
+                if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
+                    obj_converted.wall_builder_props.height = float(customer['wall_height']) / 1000
+                    if self.is_inner_wall:
+                        obj_converted.wall_builder_props.thickness = float(customer['wall_in_thickness']) / 1000
+                    else:
+                        obj_converted.wall_builder_props.thickness = float(customer['wall_out_thickness']) / 1000
+        elif obj_converted.wall_builder_props.object_type == 'FLOOR':
+            for customer in data_types.customers_json:
+                if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
+                    obj_converted.wall_builder_props.height = float(customer['ceiling']) / 1000
 
     def set_wall_position(self, context):
-        height: float
-        thickness: float
-        if self.__class__.__name__ == 'WBProps':
-            height = self.height
-            thickness = self.thickness
-        else:
-            height = context.object.wall_builder_props.height
-            thickness = context.object.wall_builder_props.thickness            
+        if context.active_object.wall_builder_props.object_type == 'WALL':
+            height: float
+            thickness: float
+            if self.__class__.__name__ == 'WBProps':
+                height = self.height
+                thickness = self.thickness
+            else:
+                height = context.object.wall_builder_props.height
+                thickness = context.object.wall_builder_props.thickness            
 
-        #getting references for all points of the wallshape
-        points = []
-        for point in context.active_object.data.bevel_object.data.splines[0].points:
-            points.append(point)
+            #getting references for all points of the wallshape
+            points = []
+            for point in context.active_object.data.bevel_object.data.splines[0].points:
+                points.append(point)
 
-        if context.object.wall_builder_props.position == 'INSIDE':
-            #1st point
-            points[0].co[0] = 0
-            points[0].co[1] = height
-            #2nd point
-            points[1].co[0] = thickness
-            points[1].co[1] = height
-            #3rd point
-            points[2].co[0] = thickness
-            points[2].co[1] = 0
-            #4th point
-            points[3].co[0] = 0
-            points[3].co[1] = 0
+            if context.object.wall_builder_props.position == 'INSIDE':
+                #1st point
+                points[0].co[0] = 0
+                points[0].co[1] = height
+                #2nd point
+                points[1].co[0] = thickness
+                points[1].co[1] = height
+                #3rd point
+                points[2].co[0] = thickness
+                points[2].co[1] = 0
+                #4th point
+                points[3].co[0] = 0
+                points[3].co[1] = 0
 
-        elif context.object.wall_builder_props.position == 'CENTER':
-            #1st point
-            points[0].co[0] = -(thickness/2)
-            points[0].co[1] = height
-            #2nd point
-            points[1].co[0] = thickness/2
-            points[1].co[1] = height
-            #3rd point
-            points[2].co[0] = thickness/2
-            points[2].co[1] = 0
-            #4th point
-            points[3].co[0] = -(thickness/2)
-            points[3].co[1] = 0
+            elif context.object.wall_builder_props.position == 'CENTER':
+                #1st point
+                points[0].co[0] = -(thickness/2)
+                points[0].co[1] = height
+                #2nd point
+                points[1].co[0] = thickness/2
+                points[1].co[1] = height
+                #3rd point
+                points[2].co[0] = thickness/2
+                points[2].co[1] = 0
+                #4th point
+                points[3].co[0] = -(thickness/2)
+                points[3].co[1] = 0
 
-        elif context.object.wall_builder_props.position == 'OUTSIDE':
-            #1st point
-            points[0].co[0] = -thickness
-            points[0].co[1] = height
-            #2nd point
-            points[1].co[0] = 0
-            points[1].co[1] = height
-            #3rd point
-            points[2].co[0] = 0
-            points[2].co[1] = 0
-            #4th point
-            points[3].co[0] = -thickness
-            points[3].co[1] = 0
+            elif context.object.wall_builder_props.position == 'OUTSIDE':
+                #1st point
+                points[0].co[0] = -thickness
+                points[0].co[1] = height
+                #2nd point
+                points[1].co[0] = 0
+                points[1].co[1] = height
+                #3rd point
+                points[2].co[0] = 0
+                points[2].co[1] = 0
+                #4th point
+                points[3].co[0] = -thickness
+                points[3].co[1] = 0
 
 
     def generate_object(self, context) -> list:
@@ -166,7 +168,6 @@ class WallBuilder(bpy.types.Operator):
             utils.node_group_link(node_group, nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
             utils.node_group_link(node_group, nd_set_shade_smooth.outputs['Geometry'], nd_bool_openings.inputs['Mesh 1'])
             utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_bool_openings.outputs['Mesh'])
-            
             #shape curve from here
             bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle', Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
@@ -176,18 +177,39 @@ class WallBuilder(bpy.types.Operator):
             obj_profile_data.fill_mode = 'NONE'
             bpy.ops.curve.spline_type_set(type='POLY')
             bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.collection.objects_remove_active()
             bpy.ops.object.select_all(action='DESELECT')
             context.view_layer.objects.active = obj_converted
             obj_converted.data.bevel_mode = 'OBJECT'
             obj_converted.data.bevel_object = obj_profile
             #set the sizes of newly generated wall
             self.set_wall_position(context)
+            obj_converted.wall_builder_props.is_converted = True
 
         elif obj_converted.wall_builder_props.object_type == 'OPENING':
             pass
 
         elif obj_converted.wall_builder_props.object_type == 'FLOOR':
-            pass
+            #setting object base parameters
+            obj_converted.data.bevel_mode = 'ROUND'
+            obj_converted.data.extrude = obj_converted.wall_builder_props.height
+            obj_converted.data.fill_mode = 'BOTH'
+            #geometry nodes modifier
+            geom_nodes_mod = bpy.context.object.modifiers.new("wb_geom_nodes", 'NODES')
+            node_group = geom_nodes_mod.node_group
+            node_group.name = '{}_geom_nodes_node_group'.format(obj_converted.name)
+            #creating nodes
+            nd_input = node_group.nodes['Group Input']
+            nd_output = node_group.nodes['Group Output']
+            nd_set_shade_smooth = node_group.nodes.new(type="GeometryNodeSetShadeSmooth")
+            #setting params
+            nd_output.location = (500, 0)
+            nd_set_shade_smooth.inputs[2].default_value = False
+            #create links
+            utils.node_group_link(node_group, nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
+            utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.outputs['Geometry'])
+            #set object as converted in wall_builder_props
+            obj_converted.wall_builder_props.is_converted = True
 
 
     def reset_object(self, obj: bpy.types.Object):
@@ -203,11 +225,35 @@ class WallBuilder(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
             obj.data.bevel_object = None
             bpy.ops.object.select_all(action='DESELECT')
-            obj.wall_builder_props.wall_profile_curve.select_set(True)
-            bpy.ops.object.delete()
+            try:
+                if obj.wall_builder_props.wall_profile_curve:
+                    obj.wall_builder_props.wall_profile_curve.select_set(True)
+            except RuntimeError:
+                pass
+            else:
+                bpy.ops.object.delete()
             obj.select_set(True)
             obj.wall_builder_props.wall_profile_curve = None
+            #clearing the fill mode if obj previously was a floor
+            obj.data.fill_mode = 'NONE'
             #clearing the openings list
+            obj.openings.clear()
+            obj.opening_index = -1
+            #setting the object is not converted
+            obj.wall_builder_props.is_converted = False
+
+        elif obj.wall_builder_props.object_type == 'FLOOR':
+            #if object has geom nodes modifier (ex. prev was floor)
+            try:
+                geom_nodes_mod = obj.modifiers['wb_geom_nodes']
+            except KeyError:
+                print('OBJECT HAD NO wb_geom_nodes MODIFIER')
+            else:
+                obj.modifiers.remove(geom_nodes_mod)
+            #setting the spline parameters
+            obj.data.extrude = 0
+            obj.data.fill_mode = 'NONE'
+            obj.wall_builder_props.is_converted = False
 
  
 
@@ -222,15 +268,14 @@ class WallBuilder(bpy.types.Operator):
         # drawtextclass = dns.get('drawtextclass')
         if obj.wall_builder_props.is_converted:
 
-        #     if dns.get('drawlineobj').handler is not None:
-        #         dns.get('drawlineobj').remove_handler()
-        #         dns.get('drawlineobj').handler = None
+            # if dns.get('drawlineobj').handler is not None:
+            #     dns.get('drawlineobj').remove_handler()
+            #     dns.get('drawlineobj').handler = None
 
-        #     if drawtextclass.handler is not None:
-        #         drawtextclass.remove_handler(context)
-        #         drawtextclass.handler = None
+            # if drawtextclass.handler is not None:
+            #     drawtextclass.remove_handler(context)
+            #     drawtextclass.handler = None
             self.reset_object(obj)
-            obj.wall_builder_props.is_converted = False
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
         else:
@@ -240,7 +285,6 @@ class WallBuilder(bpy.types.Operator):
             # if drawtextclass.handler == None:
             #     drawtextclass.draw(context)
             self.generate_object(context)
-            obj.wall_builder_props.is_converted = True
             self.report({'INFO'}, 'OBJECT GENERATED')
             return {'FINISHED'}
 

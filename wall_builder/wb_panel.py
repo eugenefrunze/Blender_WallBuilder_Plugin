@@ -71,10 +71,10 @@ class WBPanel(bpy.types.Panel):
                 #CONVERT OR RESET THE OBJECT -------------------------------------------------------
                 if context.object.wall_builder_props.is_converted:
                     row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET OBJECT', icon='CANCEL')
+                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET WALL', icon='CANCEL')
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX')
+                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT WALL', icon='SHADERFX')
 
                 #IF OBJECT HAS OPENINGS ------------------------------------------------------------
                 if context.object.wall_builder_props.is_converted:
@@ -95,9 +95,6 @@ class WBPanel(bpy.types.Panel):
                     bo = row.prop(context.object.wall_builder_props, 'align_marker')
 
 
-                    
-
-
             #IF OPENING
             elif context.object.wall_builder_props.object_type == 'OPENING':
                 row = col.row()
@@ -108,9 +105,14 @@ class WBPanel(bpy.types.Panel):
                 row = col.row()
                 row.prop(context.object.wall_builder_props, 'level')
                 row = col.row()
-                row.prop(context.object.wall_builder_props, 'height')
-                row = col.row()
-                props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT OBJECT', icon='SHADERFX')
+                row.prop(context.object.wall_builder_props, 'height', text='Floor height')
+
+                if context.object.wall_builder_props.is_converted:
+                    row = col.row()
+                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET FLOOR', icon='CANCEL')
+                else:
+                    row = col.row()
+                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT FLOOR', icon='SHADERFX')
 
             row=col.row()
             row.label(text='GLOBAL PROPERTIES:')

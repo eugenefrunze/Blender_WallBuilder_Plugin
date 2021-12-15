@@ -17,6 +17,11 @@ def get_customers_json():
     return generated
 
 
+def get_customers_json_new():
+    generated =[]
+    
+
+
 #geom nodes utils
 def node_group_link(node_group, node1_output, node2_input):
     node_group.links.new(node1_output, node2_input)
