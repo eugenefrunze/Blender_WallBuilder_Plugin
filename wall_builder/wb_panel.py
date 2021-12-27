@@ -1,7 +1,8 @@
 import bpy
-from bpy.props import RemoveProperty
-import data_types
-import wb_operators
+from .. import data_types
+from . import wb_operators
+from .. import utils
+# class WBResPanel()
 
 class WBPanel(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_MainMenu'
@@ -18,18 +19,18 @@ class WBPanel(bpy.types.Panel):
         row = layout.row()
         props = row.operator(wb_operators.WallBuilder.bl_idname)
 
+    # template for header
     # def draw_header(self, context):
     #         layout = self.layout
     #         layout.label(text="MY TEST HEADER")
     #         layout.prop(context.object.wall_builder_props, 'height')
 
 
-
     def draw(self, context):
         layout = self.layout
         if context.object:
-
             col = layout.column()
+            
             tex = bpy.data.textures['jopa']
             col.template_preview(tex, show_buttons=False)
 
@@ -42,6 +43,9 @@ class WBPanel(bpy.types.Panel):
 
             row = col.row()
             row.prop(context.object.wall_builder_props, 'customer')
+
+            row = col.row()
+            row.prop(context.scene, 'customers')
 
             row = col.row()
             row.prop(context.object.wall_builder_props, 'object_type')
@@ -81,19 +85,13 @@ class WBPanel(bpy.types.Panel):
                     scn = bpy.context.scene
 
                     row = col.row()
-                    row.template_list('OpeningsItem2', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
+                    row.template_list('OPENINGS_UL_Item', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
 
                     row = col.row(align=True)
                     row.operator('object.opnenings_adder', text='ADD OPENINGS').action = 'ADD'
                     row.operator('object.opnenings_adder', text='REMOVE OPENING').action = 'REMOVE'
-                    # row.operator('custom.add_openings', icon='ZOOM_IN', text='ADD').action = 'ADD'
-                    # row.operator('custom.add_openings', icon='ZOOM_OUT', text='REMOVE').action = 'REMOVE'
-                    row.operator('custom.add_openings', icon='TRIA_UP', text='').action = 'UP'
-                    row.operator('custom.add_openings', icon='TRIA_DOWN', text='').action = 'DOWN'
-
-                    row = col.row()
-                    bo = row.prop(context.object.wall_builder_props, 'align_marker')
-
+                    row.operator('object.opnenings_adder', icon='TRIA_UP', text='').action = 'UP'
+                    row.operator('object.opnenings_adder', icon='TRIA_DOWN', text='').action = 'DOWN'
 
             #IF OPENING
             elif context.object.wall_builder_props.object_type == 'OPENING':
@@ -114,29 +112,23 @@ class WBPanel(bpy.types.Panel):
                     row = col.row()
                     props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT FLOOR', icon='SHADERFX')
 
+            layout = self.layout
+            col = layout.column()
             row=col.row()
             row.label(text='GLOBAL PROPERTIES:')
 
             row=col.row()
-            plans_collection = row.prop(data=context.scene.wall_builder_scene_props,property='plans_collection', slider=True)     
+            plans_collection = row.prop(data=context.scene.wall_builder_scene_props,property='plans_collection', slider=True)
+
+            row = col.row()
+            row.prop(data=context.scene.wall_builder_scene_props,property='alignment_object', slider=True)     
 
             row = col.row()
             row.operator(wb_operators.BuildingAssembler.bl_idname, text='ASSEMBLE THE BUILDING') 
                 
 
 # openings item
-class OpeningsItem(bpy.types.UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        split = layout.split()
-        split.label(text=f'opening idx: {index}')
-        # split.prop(item, 'name', text='', emboss='false', translate='false', icon='EXPERIMENTAL')
-        split.label(text=item.name, icon='EXPERIMENTAL')
-
-    def invoke(self, context, ivent):
-        pass
-
-# openings item
-class OpeningsItem2(bpy.types.UIList):
+class OPENINGS_UL_Item(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         split = layout.split()
         split.label(text=f'opening idx: {index}')
@@ -150,8 +142,7 @@ class OpeningsItem2(bpy.types.UIList):
 # REGISTRATION
 
 classes = (WBPanel,
-            OpeningsItem,
-            OpeningsItem2)
+            OPENINGS_UL_Item)
 
 def register():
     from bpy.utils import register_class

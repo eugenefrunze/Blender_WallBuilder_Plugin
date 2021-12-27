@@ -1,25 +1,21 @@
 import bpy
-from bpy.utils import resource_path
-import data_types
+from . import data_types
 import urllib.request, json
 
-
 #generate customers list from API
-def get_customers_json():
+def get_customers_info():
     generated = []
-    url = 'https://www.bauvorschau.com/plugins'
+    url = 'https://www.bauvorschau.com/api/clients_measures'
     responce = urllib.request.urlopen(url)
     customers = json.loads(responce.read())
-    for idx, customer in enumerate(customers):
-        generated.append((customer['ucm_id'], 'customer'+str(idx), ''))
-    
-    print(generated)
+    data_types.customers_json = customers
+    for customer in customers:
+        generated.append((customer['ucm_id'], customer['mc_name'], ''))
     return generated
 
 
 def get_customers_json_new():
     generated =[]
-    
 
 
 #geom nodes utils
