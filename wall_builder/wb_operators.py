@@ -1,5 +1,6 @@
 import bpy
 from bpy.props import CollectionProperty, IntProperty, PointerProperty, StringProperty
+from bpy.types import SelectedUvElement
 # from . import wb_properties
 from .. import data_types
 import blf
@@ -41,8 +42,8 @@ class DrawTextClass():
         # blf.rotation(font_id, 90)
         ui_scale = bpy.context.preferences.system.ui_scale
         # blf.size(font_id, int(0 * bpy.context.preferences.view.ui_scale), int((72 * bpy.context.preferences.system.dpi)))
-        blf.size(font_id, 1, int((72 * bpy.context.preferences.system.dpi)))
-        blf.draw(font_id, context.object.name)
+        blf.size(font_id, 1, int((16 * bpy.context.preferences.system.dpi)))
+        blf.draw(font_id, str(context.object.dimensions))
 
     def draw(self, context):
         self.handler = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback_px, (context,), 'WINDOW', 'POST_PIXEL')
@@ -88,7 +89,8 @@ class WallBuilder(bpy.types.Operator):
                     obj_converted.wall_builder_props.height = float(customer['ceiling']) / 1000
 
     def set_wall_position(self, context):
-        if context.active_object.wall_builder_props.object_type == 'WALL':
+        if context.active_object.wall_builder_props.object_type == 'WALL' and \
+            context.active_object.type == 'CURVE':
             height: float
             thickness: float
             if self.__class__.__name__ == 'WBProps':
@@ -180,6 +182,7 @@ class WallBuilder(bpy.types.Operator):
                                  Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
             obj.wall_builder_props.wall_profile_curve = obj_profile
+            obj.data.use_fill_caps = True
             obj_profile.name = f'{obj.name}_taper'
             obj_profile_data = obj_profile.data
             obj_profile_data.fill_mode = 'NONE'
@@ -270,17 +273,17 @@ class WallBuilder(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.object
-        # dns = bpy.app.driver_namespace
-        # drawtextclass = dns.get('drawtextclass')
+        dns = bpy.app.driver_namespace
+        drawtextclass = dns.get('drawtextclass')
         if obj.wall_builder_props.is_converted:
 
             # if dns.get('drawlineobj').handler is not None:
             #     dns.get('drawlineobj').remove_handler()
             #     dns.get('drawlineobj').handler = None
 
-            # if drawtextclass.handler is not None:
-            #     drawtextclass.remove_handler(context)
-            #     drawtextclass.handler = None
+            if drawtextclass.handler is not None:
+                drawtextclass.remove_handler(context)
+                drawtextclass.handler = None
             self.reset_object(obj)
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
@@ -288,8 +291,9 @@ class WallBuilder(bpy.types.Operator):
             # if dns.get('drawlineobj').handler == None:
             #     dns.get('drawlineobj').start_handler(context)
 
-            # if drawtextclass.handler == None:
-            #     drawtextclass.draw(context)
+            if drawtextclass.handler == None:
+                drawtextclass.draw(context)
+                
             self.generate_object(context)
             self.report({'INFO'}, 'OBJECT GENERATED')
             return {'FINISHED'}
@@ -395,6 +399,8 @@ class OpeningsHandler(bpy.types.Operator):
             ('UP', 'Up', ''),
             ('DOWN', 'Down', '')))
 
+    nd_loc = [0, -200]
+
     def add_opening_to_geom_nodes(self, construction, opening, location):
         '''construction - actual building element to add openings to'''
         try:
@@ -437,7 +443,6 @@ class OpeningsHandler(bpy.types.Operator):
         """nd_loc - initial location for the new obj info node"""
         obj = context.object
         idx = obj.opening_index
-
         try:
             item = obj.openings[idx]
         except IndexError:
@@ -461,19 +466,31 @@ class OpeningsHandler(bpy.types.Operator):
                 obj.opening_index -= 1
                 # deleting object from geom nodes modifier and refreshing geom nodes modifier
                 self.remove_opening_from_geom_nodes(obj, obj.openings[idx].obj)
+                self.nd_loc[1] += 200
+
+                #-----------------------------------------------------------------------------------
                 # remove opening from children  -------- DOESNT WORK PROPERLY AT THE MOMENT
 
-                ctx_temp = context.copy()
-                ctx_temp['selected_editable_objects'] = [obj.openings[idx]]
-                ctx_temp['selected_objects'] = [obj.openings[idx]]
-                bpy.ops.object.parent_clear(ctx_temp, type='CLEAR_KEEP_TRANSFORM')
+                # THIS PART IS MORE PREFERABLE BUT DOESNT WORK FOR SOME REASON
+                # ctx_temp = context.copy()
+                # ctx_temp['selected_editable_objects'] = [obj.openings[idx]]
+                # ctx_temp['selected_objects'] = [obj.openings[idx]]
+                # print('SELECTED: {}'.format(ctx_temp['selected_objects']))
+                # print('SELECTED EDITABLE: {}'.format(ctx_temp['selected_editable_objects']))
+                # bpy.ops.object.parent_clear(ctx_temp, type='CLEAR_KEEP_TRANSFORM')
+
+                # THIS PART SIMPLIER AND WORKS
+                obj.openings[idx].obj.select_set(True)
+                bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+                obj.openings[idx].obj.select_set(False)
+                #-----------------------------------------------------------------------------------
 
                 # removing opening from construction object
                 obj.openings.remove(idx)
 
         if self.action == 'ADD':
             obj.select_set(False)
-            nd_loc = [0, -200]
+            
             sel_objects = context.selected_objects.copy()
             bpy.ops.object.select_all(action='DESELECT')
             for object in sel_objects:
@@ -488,6 +505,8 @@ class OpeningsHandler(bpy.types.Operator):
                 item.obj = object
                 item.obj_id = len(obj.openings)
                 obj.opening_index = len(obj.openings) - 1
+
+                #-----------------------------------------------------------------------------------
                 # setting the opening as child of obj -------- DOESNT WORK PROPERLY AT THE MOMENT
 
                 ctx_temp = context.copy()
@@ -496,10 +515,12 @@ class OpeningsHandler(bpy.types.Operator):
                 # ctx_temp['active_object'] = obj
                 # print('THE CRAP: {0}{1}'.format(ctx_temp['selected_editable_objects'], ctx_temp['selected_objects']))
                 bpy.ops.object.parent_set(ctx_temp, keep_transform=True)
+                #-----------------------------------------------------------------------------------
 
                 # putting the object to geom nodes modif
-                self.add_opening_to_geom_nodes(obj, object, nd_loc)
-                nd_loc[1] -= 200
+                self.add_opening_to_geom_nodes(obj, object, self.nd_loc)
+                self.nd_loc[1] -= 200
+                print(self.nd_loc[1])
                 print(f'OPENING ADDED: {item.obj.name}')
         return {'FINISHED'}
 

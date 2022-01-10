@@ -45,9 +45,6 @@ class WBPanel(bpy.types.Panel):
             row.prop(context.object.wall_builder_props, 'customer')
 
             row = col.row()
-            row.prop(context.scene, 'customers')
-
-            row = col.row()
             row.prop(context.object.wall_builder_props, 'object_type')
 
             #IF WALL
@@ -71,6 +68,15 @@ class WBPanel(bpy.types.Panel):
 
                 row = col.row()
                 row.prop(context.object.wall_builder_props, 'position', text='wall position (ex. photoshop stroke')
+
+                row = col.row()
+
+                try:
+                    spline = context.object.data.splines[0]
+                except AttributeError:
+                    pass
+                else:
+                    row.prop(spline, 'use_cyclic_u', text='close wall shape')
 
                 #CONVERT OR RESET THE OBJECT -------------------------------------------------------
                 if context.object.wall_builder_props.is_converted:

@@ -7,66 +7,6 @@ from bpy.props import PointerProperty, EnumProperty, FloatProperty, BoolProperty
     IntProperty, FloatVectorProperty, CollectionProperty, StringProperty
 
 
-# CUSTOMERS DATA PROP GROUP ------------------------------------------------------------------------
-class CustomersProps(bpy.types.PropertyGroup):
-    ucm_id: IntProperty(
-        name = 'ucm_id',
-        default=0
-    )
-
-    # mc_id: IntProperty(
-    #     name='mc_id',
-    #     default=0
-    # )
-
-    # client_id: IntProperty(
-    #     name='client_id',
-    #     default=0
-    # )
-
-    # wall_height: FloatProperty(
-    #     name='wall_height',
-    #     default=0
-    # )
-
-    # wall_out_thickness: FloatProperty(
-    #     name='wall_out_thickness',
-    #     default=0
-    # )
-
-    # wall_in_thickness: FloatProperty(
-    #     name='wall_in_thickness',
-    #     default=0
-    # )
-
-    # wall_middle_thickness: FloatProperty(
-    #     name='wall_middle_thickness',
-    #     default=0
-    # )
-
-    # windows_top: FloatProperty(
-    #     name='windows_top'
-    # )
-
-    # foundation: FloatProperty(
-    #     name='foundation'
-    # )
-
-    # ceiling: FloatProperty(
-    #     name='ceiling'
-    # )
-
-    # mc_name: StringProperty(
-    #     name='mc_name',
-    #     default='mrCustomer',
-    #     description='Name of the customer'
-    # )
-
-    # client_name: StringProperty(
-    #     name='client_name',
-    # )
-
-
 #props for the scene -------------------------------------------------------------------------------
 class WBSceneProps(bpy.types.PropertyGroup):
     plans_collection: PointerProperty(
@@ -81,7 +21,7 @@ class WBSceneProps(bpy.types.PropertyGroup):
 
     # customers = CollectionProperty(type=CustomersProps)
 
-#BBP objects props ---------------------------------------------------------------------------------
+#wall builder objects props ---------------------------------------------------------------------------------
 class WBProps(bpy.types.PropertyGroup):
 
     is_converted: BoolProperty(
@@ -160,24 +100,25 @@ class WBProps(bpy.types.PropertyGroup):
             default=0
         )
 
+    bounding_object: PointerProperty(
+        name='bounding object',
+        type=bpy.types.Object,
+        description='bounding box object, used maily as bool cutter object for openings'
+    )
+
 
 def register():
     from bpy.utils import register_class
-    register_class(CustomersProps)
     register_class(WBProps)
     register_class(WBSceneProps)
 
     bpy.types.Object.wall_builder_props = bpy.props.PointerProperty(type=WBProps)
 
     bpy.types.Scene.wall_builder_scene_props = bpy.props.PointerProperty(type=WBSceneProps)
-
-    # customers data that filled from the database
-    bpy.types.Scene.customers = CollectionProperty(type=CustomersProps)
     
 
 def unregister():
     from bpy.utils import unregister_class
-    unregister_class(CustomersProps)
     unregister_class(WBProps)
     unregister_class(WBSceneProps)
 
