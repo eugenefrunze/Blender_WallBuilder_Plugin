@@ -6,20 +6,35 @@ from . import test
 
 
 class WB_PT_CreatePanel(bpy.types.Panel):
-    bl_idnname = 'VIEW3D_PT_WBCreatePanel'
-    bl_label = 'wall builder create panel'
-    bl_category = 'TOOLS PANEL'
+    bl_idnname = 'VIEW3D_PT_tools_panel'
+    bl_label = 'Tools and parameters panel'
+    bl_category = 'TOOLS & PROPS'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
     def draw(self, context):
         layout = self.layout
         col = layout.column()
+        
+        if context.object:
+            row = col.row()
+            row.label(text=f'OBJECT: {context.object.name}')
+
+            row = col.row()
+            row.label(text=f'GLOBAL TYPE: {context.object.global_props.global_type}')
 
         box = layout.box()
         col = box.column()
         row = col.row()
-        row.label(text='OBJECTS TOOLS')
+        row.label(text='PARAMETERS')
+
+        row = col.row()
+        row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='CREATE OBJECTS')
 
         row = col.row()
         row.operator(operators.CurveAdder.bl_idname, text='ADD CURVE', icon='MOD_CURVE')
@@ -30,7 +45,7 @@ class WB_PT_CreatePanel(bpy.types.Panel):
         row.label(text='OPENINGS TOOLS')
 
         row = col.row()
-        row.operator(operators.OpeningsBoundsCreator.bl_idname, text='CREATE BOUNDS', icon='FILE_3D')
+        row.operator(operators.BoundingsHaldler.bl_idname, text='CREATE BOUNDS', icon='FILE_3D')
 
         box = layout.box()
         col = box.column()

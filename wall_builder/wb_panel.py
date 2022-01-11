@@ -7,7 +7,7 @@ from .. import utils
 class WBPanel(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_MainMenu'
     bl_label = 'wall builder configurator'
-    bl_category = 'C7 WALL BUILDER'
+    bl_category = 'WALL BUILDER'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 

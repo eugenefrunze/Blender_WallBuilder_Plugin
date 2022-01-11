@@ -23,7 +23,10 @@ def get_customers_info():
             data_types.customers_json = customers
             for customer in customers:
                 interface_list_generated.append((customer['ucm_id'], customer['mc_name'], ''))
+
             return interface_list_generated
+
+
 
 
 # BASIC OPERATIONS ---------------------------------------------------------------------------------
@@ -73,7 +76,7 @@ def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> 
     y_max = max(v_cords_y)
     z_min = min(v_cords_z)
     z_max = max(v_cords_z)
-    print(z_min)
+    # print(z_min)
     
     return (x_max, y_max, z_max, x_min, y_min, z_min)
 
@@ -87,7 +90,7 @@ def get_bounder_vertices(object: bpy.types.Object) -> list:
 
     obj_data = object.data
     v_idxs = [[], [], [], [], [], []]
-    print('V DATA HERE')
+    # print('V DATA HERE')
     for p in obj_data.polygons:
         for idx, v in enumerate(list(p.normal)):
             if v > 0:

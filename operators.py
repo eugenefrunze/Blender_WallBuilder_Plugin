@@ -2,6 +2,19 @@ import bpy
 from .utils import get_object_bounds_coords, get_bounder_vertices, set_parent
 
 
+class ExtraCurvesEnabler(bpy.types.Operator):
+    bl_idname = 'custom.extracurvesenabler'
+    bl_label = 'enable curve extra'
+    bl_options = {'REGISTER', 'UNDO'}
+    
+
+    def execute(self, context):
+        bpy.ops.preferences.addon_enable(module="add_curve_extra_objects")
+
+        self.report({'INFO'}, '"Add Curve: Extra Objects" modifier enabled')
+        return {'FINISHED'}
+
+
 class CurveAdder(bpy.types.Operator):
     bl_idname = 'object.curve_adder'
     bl_label = 'ADD CURVE'
@@ -25,25 +38,27 @@ class CurveAdder(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class OpeningsBoundsCreator(bpy.types.Operator):
+class BoundingsHaldler(bpy.types.Operator):
     bl_idname = 'object.openings_bounds_creator'
     bl_label = 'CREATE BOUNDS'
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None
+        return context.object is not None and context.object.type == 'MESH'
 
-    #CLASS METHODS ---------------------------------------------------------------------------------
-    def execute(self, context):
-        obj = context.object
+
+    # custom methods -------------------------------------------------------------------------------
+
+    def set_boundings_for_object(self, object, context):
+        object = context.object
         #get object's bounds
-        obj_bounds_cords = get_object_bounds_coords(obj, 'WORLD')
-        print(obj_bounds_cords)
-
+        obj_bounds_cords = get_object_bounds_coords(object, 'WORLD')
+        # print(obj_bounds_cords)
         #create bounds object
         bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
         bounds_obj = context.object
+        bounds_obj.global_props.global_type = 'BOUNDING'
         bounds_obj.display_type = 'WIRE'
         bnds_obj_sides = get_bounder_vertices(bounds_obj)
         for idx, v_grp in enumerate(bnds_obj_sides):
@@ -60,15 +75,51 @@ class OpeningsBoundsCreator(bpy.types.Operator):
         bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
 
         #setting bounding object as parent for opening
-        set_parent([obj], bounds_obj, True, context)
+        set_parent([object], bounds_obj, True, context)
 
-        return {'FINISHED'}
+        #setting bounding object to an opening object parameter 'bounding_object'
+        object.wall_builder_props.bounding_object = bounds_obj
+
+
+    #class methods ---------------------------------------------------------------------------------
+    def execute(self, context):
+        obj = context.object
+        #check if the object is not of bounding type
+        if obj.global_props.global_type == 'BOUNDING':
+            self.report({'WARNING'}, 'The object is itself a bounding!')
+            return {'CANCELLED'}
+
+        if obj.wall_builder_props.bounding_object == None:
+            self.set_boundings_for_object(obj, context)
+            self.report({'INFO'}, 'Bounding object created successfully')
+            return {'FINISHED'}
+        else:
+            # cheking if object has dead (deleted) bounding object
+            try:
+                obj.wall_builder_props.bounding_object.select_set(True)
+            except RuntimeError as err:
+                print(err, 'Reason: Object had dead bounding object. Created a new one')
+                self.report({'INFO'}, 'Object had dead bounding object. Created a new one')
+                obj.wall_builder_props.bounding_object = None
+                self.set_boundings_for_object(obj, context)
+                return {'FINISHED'}
+            else:
+                print('Object already has a bounding object')
+                obj.wall_builder_props.bounding_object.select_set(False)
+                self.report({'INFO'}, 'Object already has a bounding object')
+                return {'FINISHED'}
+
+        
+
+
+        
 
 #END OF OpeningsBoundsCreator ----------------------------------------------------------------------
 
 classes = [
     CurveAdder,
-    OpeningsBoundsCreator
+    BoundingsHaldler,
+    ExtraCurvesEnabler
 ]
 
 
