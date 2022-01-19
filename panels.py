@@ -1,19 +1,23 @@
 import bpy
-from .. import data_types
-from . import wb_operators
-from .. import utils
-# class WBResPanel()
+from . import operators
+
+
+#---------------------------------------------------------------------------------------------------
+# wall builder panel
+#---------------------------------------------------------------------------------------------------
 
 class WBPanel(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_MainMenu'
-    bl_label = 'wall builder configurator'
+    bl_label = 'wall builder panel'
     bl_category = 'WALL BUILDER'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
-    def get_object_buttons(self, layout):
+
+    def get_object_buttons(self, layout): # ------------$%&5756&7 what is this? --------------------
         row = layout.row()
-        props = row.operator(wb_operators.WallBuilder.bl_idname)
+        props = row.operator(operators.WallBuilder.bl_idname)
+
 
     # template for header
     # def draw_header(self, context):
@@ -77,10 +81,10 @@ class WBPanel(bpy.types.Panel):
                 #CONVERT OR RESET THE OBJECT -------------------------------------------------------
                 if context.object.wb_props.is_converted:
                     row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET WALL', icon='CANCEL')
+                    row.operator(operators.WallBuilder.bl_idname, text='RESET WALL', icon='CANCEL')
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT WALL', icon='SHADERFX')
+                    props = row.operator(operators.WallBuilder.bl_idname, text='CONVERT WALL', icon='SHADERFX')
 
                 #IF OBJECT HAS OPENINGS ------------------------------------------------------------
                 if context.object.wb_props.is_converted:
@@ -109,10 +113,10 @@ class WBPanel(bpy.types.Panel):
 
                 if context.object.wb_props.is_converted:
                     row = col.row()
-                    row.operator(wb_operators.WallBuilder.bl_idname, text='RESET FLOOR', icon='CANCEL')
+                    row.operator(operators.WallBuilder.bl_idname, text='RESET FLOOR', icon='CANCEL')
                 else:
                     row = col.row()
-                    props = row.operator(wb_operators.WallBuilder.bl_idname, text='CONVERT FLOOR', icon='SHADERFX')
+                    props = row.operator(operators.WallBuilder.bl_idname, text='CONVERT FLOOR', icon='SHADERFX')
 
             layout = self.layout
             col = layout.column()
@@ -126,10 +130,10 @@ class WBPanel(bpy.types.Panel):
             row.prop(data=context.scene.wb_props,property='alignment_object', slider=True)     
 
             row = col.row()
-            row.operator(wb_operators.BuildingAssembler.bl_idname, text='ASSEMBLE THE BUILDING') 
-                
+            row.operator(operators.BuildingAssembler.bl_idname, text='ASSEMBLE THE BUILDING')
 
-# openings item
+
+# openings item format
 class OPENINGS_UL_Item(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         split = layout.split()
@@ -141,20 +145,106 @@ class OPENINGS_UL_Item(bpy.types.UIList):
         pass
 
 
-# REGISTRATION
+#---------------------------------------------------------------------------------------------------
+# tools panel
+#---------------------------------------------------------------------------------------------------
 
-classes = (WBPanel,
-            OPENINGS_UL_Item)
+class TPanel(bpy.types.Panel):
+    bl_idnname = 'VIEW3D_PT_tools_panel'
+    bl_label = 'Tools and parameters panel'
+    bl_category = 'TOOLS & PROPS'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        
+        if context.object:
+            row = col.row()
+            row.label(text=f'OBJECT: {context.object.name}')
+
+            row = col.row()
+            row.label(text=f'GLOBAL TYPE: {context.object.props.type}')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='PARAMETERS')
+
+        row = col.row()
+        row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='CREATE OBJECTS')
+
+        row = col.row()
+        row.operator(operators.CurveAdder.bl_idname, text='ADD CURVE', icon='MOD_CURVE')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='OPENINGS TOOLS')
+
+        row = col.row()
+        row.operator(operators.BoundingsHaldler.bl_idname, text='CREATE BOUNDS', icon='FILE_3D')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='MEASURES TOOLS')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='FBX IMPORTER')
+
+        row = col.row()
+        row.prop(context.scene.props, 'library_fbx_import_path')
+
+        row = col.row()
+        row.operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='Test Modal Operator')
+
+        row = col.row()
+        row.operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='OT_TestGPUDrawer')
+
+        row = col.row()
+        row.operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
+
+
+#---------------------------------------------------------------------------------------------------
+# register / unregister
+#---------------------------------------------------------------------------------------------------
 
 def register():
     from bpy.utils import register_class
-    for cls in classes:
-        register_class(cls)
+
+    # wall builder panel
+    register_class(WBPanel)
+    register_class(OPENINGS_UL_Item)
+
+    #tools panel
+    register_class(TPanel)
+
 
 def unregister():
     from bpy.utils import unregister_class
-    for cls in classes:
-        unregister_class(cls)
 
-if __name__ == "__main__":
-    register()
+    #wall builder panel
+    unregister_class(WBPanel)
+    unregister_class(OPENINGS_UL_Item)
+
+    #tools panel
+    unregister_class(TPanel)

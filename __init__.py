@@ -11,12 +11,9 @@ bl_info = {
 
 from . import data_types
 from . import utils
-from . import tools_panel
 from . import operators
 from . import properties
-from .wall_builder import wb_properties
-from .wall_builder import wb_panel
-from .wall_builder import wb_operators
+from . import panels
 
 #---------------------------------------------------------------------------------------------------
 # TEST-EDU PART HERE -------------------------------------------------------------------------------
@@ -30,10 +27,7 @@ import bpy
 
 
 def register():
-    wb_properties.register()
-    wb_panel.register()
-    wb_operators.register()
-    tools_panel.register()
+    panels.register()
     operators.register()
     properties.register()
 
@@ -47,10 +41,7 @@ def register():
 
 
 def unregister():
-    wb_properties.unregister()
-    wb_panel.unregister()
-    wb_operators.unregister()
-    tools_panel.unregister()
+    panels.unregister()
     operators.unregister()
     properties.unregister()
 

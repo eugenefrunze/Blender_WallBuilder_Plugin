@@ -1,7 +1,4 @@
 import bpy
-from bpy.props import CollectionProperty, IntProperty, PointerProperty, StringProperty
-from bpy.types import SelectedUvElement
-# from . import wb_properties
 from .. import data_types
 import blf
 import gpu
@@ -24,21 +21,21 @@ class WallBuilder(bpy.types.Operator):
     # wallbuilder custom methods from here
     def set_customer_preset(self, context):
         obj_converted = context.object
-        if obj_converted.wall_builder_props.object_type == 'WALL':
+        if obj_converted.wb_props.object_type == 'WALL':
             for customer in data_types.customers_json:
-                if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
-                    obj_converted.wall_builder_props.height = float(customer['wall_height']) / 1000
+                if customer['ucm_id'] == obj_converted.wb_props.customer:
+                    obj_converted.wb_props.height = float(customer['wall_height']) / 1000
                     if self.is_inner_wall:
-                        obj_converted.wall_builder_props.thickness = float(customer['wall_in_thickness']) / 1000
+                        obj_converted.wb_props.thickness = float(customer['wall_in_thickness']) / 1000
                     else:
-                        obj_converted.wall_builder_props.thickness = float(customer['wall_out_thickness']) / 1000
-        elif obj_converted.wall_builder_props.object_type == 'FLOOR':
+                        obj_converted.wb_props.thickness = float(customer['wall_out_thickness']) / 1000
+        elif obj_converted.wb_props.object_type == 'FLOOR':
             for customer in data_types.customers_json:
-                if customer['ucm_id'] == obj_converted.wall_builder_props.customer:
-                    obj_converted.wall_builder_props.height = float(customer['ceiling']) / 1000
+                if customer['ucm_id'] == obj_converted.wb_props.customer:
+                    obj_converted.wb_props.height = float(customer['ceiling']) / 1000
 
     def set_wall_position(self, context):
-        if context.active_object.wall_builder_props.object_type == 'WALL' and \
+        if context.active_object.wb_props.object_type == 'WALL' and \
             context.active_object.type == 'CURVE':
             height: float
             thickness: float
@@ -46,19 +43,19 @@ class WallBuilder(bpy.types.Operator):
                 height = self.height
                 thickness = self.thickness
             else:
-                height = context.object.wall_builder_props.height
-                thickness = context.object.wall_builder_props.thickness
+                height = context.object.wb_props.height
+                thickness = context.object.wb_props.thickness
 
             # getting references for all points of the wallshape
             points = []
             #check if taper object created (or the wall is just a curve at the moment)
-            if context.active_object.wall_builder_props.wall_profile_curve != None:
+            if context.active_object.wb_props.wall_profile_curve != None:
                 for point in context.active_object.data.bevel_object.data.splines[0].points:
                     points.append(point)
 
             #if points is empty, then the wall is just a curve at the moment
             if len(points) > 0:
-                if context.object.wall_builder_props.position == 'INSIDE':
+                if context.object.wb_props.position == 'INSIDE':
                     # 1st point
                     points[0].co[0] = 0
                     points[0].co[1] = height
@@ -72,7 +69,7 @@ class WallBuilder(bpy.types.Operator):
                     points[3].co[0] = 0
                     points[3].co[1] = 0
 
-                elif context.object.wall_builder_props.position == 'CENTER':
+                elif context.object.wb_props.position == 'CENTER':
                     # 1st point
                     points[0].co[0] = -(thickness / 2)
                     points[0].co[1] = height
@@ -86,7 +83,7 @@ class WallBuilder(bpy.types.Operator):
                     points[3].co[0] = -(thickness / 2)
                     points[3].co[1] = 0
 
-                elif context.object.wall_builder_props.position == 'OUTSIDE':
+                elif context.object.wb_props.position == 'OUTSIDE':
                     # 1st point
                     points[0].co[0] = -thickness
                     points[0].co[1] = height
@@ -103,9 +100,9 @@ class WallBuilder(bpy.types.Operator):
 
     def generate_object(self, context) -> list:
         obj = context.object
-        wb_props = obj.wall_builder_props
+        wb_props = obj.wb_props
         obj_conv_collection = obj.users_collection[0]
-        if obj.wall_builder_props.object_type == 'WALL':
+        if obj.wb_props.object_type == 'WALL':
             # setting object base parameters
             obj.data.dimensions = '2D'
             obj.name = 'wb_wall_{0}_{1}'.format('inner' if wb_props.is_inner_wall else 'outer', wb_props.level)
@@ -134,7 +131,7 @@ class WallBuilder(bpy.types.Operator):
             bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Rectangle',
                                  Simple_width=1, Simple_length=0, use_cyclic_u=True)
             obj_profile = context.object
-            obj.wall_builder_props.wall_profile_curve = obj_profile
+            obj.wb_props.wall_profile_curve = obj_profile
             obj.data.use_fill_caps = True
             obj_profile.name = f'{obj.name}_taper'
             obj_profile_data = obj_profile.data
@@ -148,15 +145,15 @@ class WallBuilder(bpy.types.Operator):
             obj.data.bevel_object = obj_profile
             # set the sizes of newly generated wall
             self.set_wall_position(context)
-            obj.wall_builder_props.is_converted = True
+            obj.wb_props.is_converted = True
 
-        elif obj.wall_builder_props.object_type == 'OPENING':
+        elif obj.wb_props.object_type == 'OPENING':
             pass
 
-        elif obj.wall_builder_props.object_type == 'FLOOR':
+        elif obj.wb_props.object_type == 'FLOOR':
             # setting object base parameters
             obj.data.bevel_mode = 'ROUND'
-            obj.data.extrude = obj.wall_builder_props.height / 2
+            obj.data.extrude = obj.wb_props.height / 2
             obj.data.fill_mode = 'BOTH'
             obj.name = 'wb_floor_{0}'.format(wb_props.level)
             # geometry nodes modifier
@@ -173,11 +170,11 @@ class WallBuilder(bpy.types.Operator):
             # create links
             utils.node_group_link(node_group, nd_input.outputs['Geometry'], nd_set_shade_smooth.inputs['Geometry'])
             utils.node_group_link(node_group, nd_output.inputs['Geometry'], nd_set_shade_smooth.outputs['Geometry'])
-            # set object as converted in wall_builder_props
-            obj.wall_builder_props.is_converted = True
+            # set object as converted in wb_props
+            obj.wb_props.is_converted = True
 
     def reset_object(self, obj: bpy.types.Object):
-        if obj.wall_builder_props.object_type == 'WALL':
+        if obj.wb_props.object_type == 'WALL':
             # remove the geom nodes modifier
             try:
                 geom_nodes_mod = obj.modifiers['wb_geom_nodes']
@@ -190,23 +187,23 @@ class WallBuilder(bpy.types.Operator):
             obj.data.bevel_object = None
             bpy.ops.object.select_all(action='DESELECT')
             try:
-                if obj.wall_builder_props.wall_profile_curve:
-                    obj.wall_builder_props.wall_profile_curve.select_set(True)
+                if obj.wb_props.wall_profile_curve:
+                    obj.wb_props.wall_profile_curve.select_set(True)
             except RuntimeError:
                 pass
             else:
                 bpy.ops.object.delete()
             obj.select_set(True)
-            obj.wall_builder_props.wall_profile_curve = None
+            obj.wb_props.wall_profile_curve = None
             # clearing the fill mode if obj previously was a floor
             obj.data.fill_mode = 'NONE'
             # clearing the openings list
             obj.openings.clear()
             obj.opening_index = -1
             # setting the object is not converted
-            obj.wall_builder_props.is_converted = False
+            obj.wb_props.is_converted = False
 
-        elif obj.wall_builder_props.object_type == 'FLOOR':
+        elif obj.wb_props.object_type == 'FLOOR':
             # if object has geom nodes modifier (ex. prev was floor)
             try:
                 geom_nodes_mod = obj.modifiers['wb_geom_nodes']
@@ -217,7 +214,7 @@ class WallBuilder(bpy.types.Operator):
             # setting the spline parameters
             obj.data.extrude = 0
             obj.data.fill_mode = 'NONE'
-            obj.wall_builder_props.is_converted = False
+            obj.wb_props.is_converted = False
 
     # wallbuilder class methods here
     @classmethod
@@ -226,7 +223,7 @@ class WallBuilder(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.object
-        if obj.wall_builder_props.is_converted:
+        if obj.wb_props.is_converted:
             self.reset_object(obj)
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
@@ -254,7 +251,7 @@ class BuildingAssembler(bpy.types.Operator):
         # setting objs locations and calculating elevation
         for group in objs[level]:
             for obj in objs[level][group]:
-                wb_props = obj.wall_builder_props
+                wb_props = obj.wb_props
                 if wb_props.object_type == 'FLOOR':
                     obj.location = (init_loc[0], init_loc[1], elevation + (wb_props.height / 2))
                     elevation += wb_props.height
@@ -263,7 +260,7 @@ class BuildingAssembler(bpy.types.Operator):
                     if floor_added:
                         obj.location = (init_loc[0], init_loc[1], elevation)
                     else:
-                        floor_height = objs[level]['floors'][0].wall_builder_props.height
+                        floor_height = objs[level]['floors'][0].wb_props.height
                         obj.location = (init_loc[0], init_loc[1], elevation + floor_height)
                     if wb_props.height > max_wall_height:
                         max_wall_height = wb_props.height
@@ -288,7 +285,7 @@ class BuildingAssembler(bpy.types.Operator):
         # filling the objects dictionary
         wb_objects = context.scene.wall_builder_scene_props.plans_collection.objects
         for obj in wb_objects:
-            wb_props = obj.wall_builder_props
+            wb_props = obj.wb_props
             for level in data_types.levels:
                 if wb_props.level == level[0] and wb_props.object_type == 'WALL' and not wb_props.is_inner_wall:
                     objs[level[0]]['outer_walls'].append(obj)
@@ -301,7 +298,7 @@ class BuildingAssembler(bpy.types.Operator):
         # getting EG (1st floor) wall position as
         init_loc = context.scene.wall_builder_scene_props.alignment_object.location
         EG_level_max_height = max(
-            [a.wall_builder_props.height for a in objs['EG']['outer_walls']])  # the highest wall on EG (1st fl)
+            [a.wb_props.height for a in objs['EG']['outer_walls']])  # the highest wall on EG (1st fl)
         # assembling EG (1st floor)
         for group in objs['EG']:
             for obj in objs['EG'][group]:
@@ -467,16 +464,9 @@ class OpeningsHandler(bpy.types.Operator):
 # END OF OPENINGS HANDLER OPERATOR
 
 
-# OPENINGS LIST PROP GROUP --------------------------------------------------------------------------
-class OpeningsCollection(bpy.types.PropertyGroup):
-    obj: PointerProperty(type=bpy.types.Object)
-    obj_id: IntProperty()
-
-
 # REGISTERING ---------------------------------------------------------------------------------------
 classes = (WallBuilder,
            BuildingAssembler,
-           OpeningsCollection,
            OpeningsHandler
            )
 
@@ -486,17 +476,10 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.Object.openings = CollectionProperty(type=OpeningsCollection)
-    bpy.types.Object.opening_index = IntProperty()
-
-
 def unregister():
     from bpy.utils import unregister_class
     for cls in classes:
         unregister_class(cls)
-
-    del bpy.types.Object.openings
-    del bpy.types.Object.opening_index
 
 
 if __name__ == "__main__":
