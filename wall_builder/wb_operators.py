@@ -7,57 +7,6 @@ import blf
 import gpu
 from gpu_extras.batch import batch_for_shader
 from .. import utils
-import bmesh
-
-
-# BLF TEXT DRAWING ----------------------------------------------------------------------------------
-
-class DrawLine():
-    def __init__(self):
-        self.handler = None
-
-    def draw(self, coords):
-        self.shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-        self.shader.bind()
-        self.shader.uniform_float("color", (1, 1, 0, 1))
-        self.batch = batch_for_shader(self.shader, 'LINES', {"pos": coords})
-        self.batch.draw(self.shader)
-
-    def start_handler(self, context):
-        self.handler = bpy.types.SpaceView3D.draw_handler_add(self.draw, ([(0, 0, 0), context.object.location],),
-                                                              'WINDOW', 'POST_VIEW')
-
-    def remove_handler(self):
-        bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
-
-
-class DrawTextClass():
-
-    def __init__(self, context):
-        self.handler = None
-
-    def draw_callback_px(self, context):
-        font_id = 0
-        blf.position(font_id, 1, 1, 0)
-        # blf.rotation(font_id, 90)
-        ui_scale = bpy.context.preferences.system.ui_scale
-        # blf.size(font_id, int(0 * bpy.context.preferences.view.ui_scale), int((72 * bpy.context.preferences.system.dpi)))
-        blf.size(font_id, 1, int((16 * bpy.context.preferences.system.dpi)))
-        blf.draw(font_id, str(context.object.dimensions))
-
-    def draw(self, context):
-        self.handler = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback_px, (context,), 'WINDOW', 'POST_PIXEL')
-
-    def remove_handler(self, context):
-        bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
-
-
-# getting the DrawtTextClass from the namespace
-drawtextclass = DrawTextClass(bpy.context)
-dns = bpy.app.driver_namespace
-dns['drawtextclass'] = drawtextclass
-
-dns['drawlineobj'] = DrawLine()
 
 
 # WALL BUILDER --------------------------------------------------------------------------------------
@@ -102,50 +51,54 @@ class WallBuilder(bpy.types.Operator):
 
             # getting references for all points of the wallshape
             points = []
-            for point in context.active_object.data.bevel_object.data.splines[0].points:
-                points.append(point)
+            #check if taper object created (or the wall is just a curve at the moment)
+            if context.active_object.wall_builder_props.wall_profile_curve != None:
+                for point in context.active_object.data.bevel_object.data.splines[0].points:
+                    points.append(point)
 
-            if context.object.wall_builder_props.position == 'INSIDE':
-                # 1st point
-                points[0].co[0] = 0
-                points[0].co[1] = height
-                # 2nd point
-                points[1].co[0] = thickness
-                points[1].co[1] = height
-                # 3rd point
-                points[2].co[0] = thickness
-                points[2].co[1] = 0
-                # 4th point
-                points[3].co[0] = 0
-                points[3].co[1] = 0
+            #if points is empty, then the wall is just a curve at the moment
+            if len(points) > 0:
+                if context.object.wall_builder_props.position == 'INSIDE':
+                    # 1st point
+                    points[0].co[0] = 0
+                    points[0].co[1] = height
+                    # 2nd point
+                    points[1].co[0] = thickness
+                    points[1].co[1] = height
+                    # 3rd point
+                    points[2].co[0] = thickness
+                    points[2].co[1] = 0
+                    # 4th point
+                    points[3].co[0] = 0
+                    points[3].co[1] = 0
 
-            elif context.object.wall_builder_props.position == 'CENTER':
-                # 1st point
-                points[0].co[0] = -(thickness / 2)
-                points[0].co[1] = height
-                # 2nd point
-                points[1].co[0] = thickness / 2
-                points[1].co[1] = height
-                # 3rd point
-                points[2].co[0] = thickness / 2
-                points[2].co[1] = 0
-                # 4th point
-                points[3].co[0] = -(thickness / 2)
-                points[3].co[1] = 0
+                elif context.object.wall_builder_props.position == 'CENTER':
+                    # 1st point
+                    points[0].co[0] = -(thickness / 2)
+                    points[0].co[1] = height
+                    # 2nd point
+                    points[1].co[0] = thickness / 2
+                    points[1].co[1] = height
+                    # 3rd point
+                    points[2].co[0] = thickness / 2
+                    points[2].co[1] = 0
+                    # 4th point
+                    points[3].co[0] = -(thickness / 2)
+                    points[3].co[1] = 0
 
-            elif context.object.wall_builder_props.position == 'OUTSIDE':
-                # 1st point
-                points[0].co[0] = -thickness
-                points[0].co[1] = height
-                # 2nd point
-                points[1].co[0] = 0
-                points[1].co[1] = height
-                # 3rd point
-                points[2].co[0] = 0
-                points[2].co[1] = 0
-                # 4th point
-                points[3].co[0] = -thickness
-                points[3].co[1] = 0
+                elif context.object.wall_builder_props.position == 'OUTSIDE':
+                    # 1st point
+                    points[0].co[0] = -thickness
+                    points[0].co[1] = height
+                    # 2nd point
+                    points[1].co[0] = 0
+                    points[1].co[1] = height
+                    # 3rd point
+                    points[2].co[0] = 0
+                    points[2].co[1] = 0
+                    # 4th point
+                    points[3].co[0] = -thickness
+                    points[3].co[1] = 0
 
 
     def generate_object(self, context) -> list:
@@ -273,27 +226,11 @@ class WallBuilder(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.object
-        dns = bpy.app.driver_namespace
-        drawtextclass = dns.get('drawtextclass')
         if obj.wall_builder_props.is_converted:
-
-            # if dns.get('drawlineobj').handler is not None:
-            #     dns.get('drawlineobj').remove_handler()
-            #     dns.get('drawlineobj').handler = None
-
-            if drawtextclass.handler is not None:
-                drawtextclass.remove_handler(context)
-                drawtextclass.handler = None
             self.reset_object(obj)
             self.report({'INFO'}, 'OBJECT HAS BEEN RESET')
             return {'FINISHED'}
         else:
-            # if dns.get('drawlineobj').handler == None:
-            #     dns.get('drawlineobj').start_handler(context)
-
-            if drawtextclass.handler == None:
-                drawtextclass.draw(context)
-                
             self.generate_object(context)
             self.report({'INFO'}, 'OBJECT GENERATED')
             return {'FINISHED'}
@@ -480,9 +417,11 @@ class OpeningsHandler(bpy.types.Operator):
                 # bpy.ops.object.parent_clear(ctx_temp, type='CLEAR_KEEP_TRANSFORM')
 
                 # THIS PART SIMPLIER AND WORKS
-                obj.openings[idx].obj.select_set(True)
-                bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-                obj.openings[idx].obj.select_set(False)
+                #check if object is not deleted, and opening is not refer to an empty object
+                if obj.openings[idx].obj.name in context.view_layer.objects:
+                    obj.openings[idx].obj.select_set(True)
+                    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+                    obj.openings[idx].obj.select_set(False)
                 #-----------------------------------------------------------------------------------
 
                 # removing opening from construction object

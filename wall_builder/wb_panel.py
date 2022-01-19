@@ -31,8 +31,8 @@ class WBPanel(bpy.types.Panel):
         if context.object:
             col = layout.column()
             
-            tex = bpy.data.textures['jopa']
-            col.template_preview(tex, show_buttons=False)
+            # tex = bpy.data.textures['jopa']
+            # col.template_preview(tex, show_buttons=False)
 
             row = col.row()
             row.label(text='OBJECT: {} ({})'.format(context.object.name, context.object.type))

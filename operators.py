@@ -1,5 +1,17 @@
+from operator import le
+import pathlib
 import bpy
+
+from bpy_extras.view3d_utils import location_3d_to_region_2d
+from gpu import select
 from .utils import get_object_bounds_coords, get_bounder_vertices, set_parent
+
+import bgl
+import blf
+import gpu
+from gpu_extras.batch import batch_for_shader
+
+from mathutils import Vector
 
 
 class ExtraCurvesEnabler(bpy.types.Operator):
@@ -58,7 +70,7 @@ class BoundingsHaldler(bpy.types.Operator):
         #create bounds object
         bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
         bounds_obj = context.object
-        bounds_obj.global_props.global_type = 'BOUNDING'
+        bounds_obj.props.type = 'BOUNDING'
         bounds_obj.display_type = 'WIRE'
         bnds_obj_sides = get_bounder_vertices(bounds_obj)
         for idx, v_grp in enumerate(bnds_obj_sides):
@@ -85,7 +97,7 @@ class BoundingsHaldler(bpy.types.Operator):
     def execute(self, context):
         obj = context.object
         #check if the object is not of bounding type
-        if obj.global_props.global_type == 'BOUNDING':
+        if obj.props.type == 'BOUNDING':
             self.report({'WARNING'}, 'The object is itself a bounding!')
             return {'CANCELLED'}
 
@@ -109,17 +121,181 @@ class BoundingsHaldler(bpy.types.Operator):
                 self.report({'INFO'}, 'Object already has a bounding object')
                 return {'FINISHED'}
 
+
+class FBXLibraryImporter(bpy.types.Operator):
+
+    bl_idname = 'scene.fbx_library_importer'
+    bl_label = 'IMPORT ALL FBX'
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        abspath = bpy.path.abspath(context.scene.props.library_fbx_import_path)
+        # print(abspath)
+        import_path = pathlib.Path(abspath)
+        # print(import_path)
+
+        for import_fpath in import_path.glob('*.fbx'):
+            print(str(import_fpath))
+            bpy.ops.import_scene.fbx(filepath=str(import_fpath))
+
+        return {'FINISHED'}
+
+
+class OT_TestModalOperator(bpy.types.Operator):
+    bl_idname = 'object.test_modal_operator'
+    bl_label = 'Test Modal Operator'
+    bl_options = {'REGISTER'}
+
+
+    crap: bpy.props.StringProperty()
+    crap2: bpy.props.StringProperty()
+
+    # def __init__(self):
+    #     self.test1 = 0
+    #     self.test2 = 0
+
+    def invoke(self, context, event: bpy.types.Event):
+        self.crap = 'ZZZ'
+        self.crap2 = 'ZZZ'
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+        
+        # self.crap = event.type
+        # self.crap2 = event.ctrl
+        # return self.execute(context)
+        # return {'PASS_THROUGH'}
+
+    def modal(self, context: bpy.types.Context, event: bpy.types.Event):
+        # print(event.type)
+        if event.type == 'MOUSEMOVE':
+            print(f'MOUSEMOVE: {event.mouse_x}', f'{event.mouse_y}')
+        
+        elif event.type == 'LEFTMOUSE':
+            print(f'LEFT {event.value} at {event.mouse_x}, {event.mouse_y}')
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            print(f'{event.type} {event.value} -- STOPPING')
+            # return {'FINISHED'}
+            return self.execute(context)
+
+        return {'PASS_THROUGH'}
         
 
+    def execute(self, context):
+        self.report({'INFO'}, f'{self.bl_idname} EXECUTED {self.crap} {self.crap2}')
+        return {'FINISHED'} 
 
+class OT_TestGPUDrawer(bpy.types.Operator):
+    bl_idname = 'object.gpu_drawer'
+    bl_label = 'draw gpu'
+    bl_options = {'REGISTER'}
+
+    def draw_line_3d(color, start, end):
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": [start, end]})
+        shader.bind()
+        shader.uniform_float("color", color)
+        batch.draw(shader)
+    
+    def draw_callback_3d(self, operator, context):
+        vert1 = (context.object.matrix_world @ context.object.data.vertices[0].co) + Vector((0.2, 0.2, 0))
+        vert2 = (context.object.matrix_world @ context.object.data.vertices[1].co) + Vector((0.2, 0.2, 0))
+
+        pos1 = (context.object.matrix_world @ context.object.data.vertices[0].co)
+        pos2 = (context.object.matrix_world @ context.object.data.vertices[0].co) + Vector((0.4, 0.4, 0))
+
+        pos3 = (context.object.matrix_world @ context.object.data.vertices[1].co)
+
+        pos4 = (context.object.matrix_world @ context.object.data.vertices[1].co) + Vector((0.4, 0.4, 0))
+
+        bgl.glEnable(bgl.GL_BLEND)
+        bgl.glEnable(bgl.GL_LINE_SMOOTH)
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+
+        #draw line 1
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": [vert1, vert2]})
+        shader.bind()
+        shader.uniform_float("color", (0.0, 1.0, 0.0, 0.7))
+        batch.draw(shader)
+
+        #draw line 2
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": [pos1, pos2]})
+        shader.bind()
+        shader.uniform_float("color", (0.0, 1.0, 0.0, 0.7))
+        batch.draw(shader)
+
+        #draw line 3
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": [pos3, pos4]})
+        shader.bind()
+        shader.uniform_float("color", (0.0, 1.0, 0.0, 0.7))
+        batch.draw(shader)
+
+        # bgl.glEnd()
+        bgl.glLineWidth(1)
+        bgl.glDisable(bgl.GL_BLEND)
+        bgl.glDisable(bgl.GL_LINE_SMOOTH)
+        bgl.glEnable(bgl.GL_DEPTH_TEST)
+    
+    def draw_callback_text_2D(self, operator, context):
+
+        v3d = context.space_data
+        rv3d = v3d.region_3d
+        # region = v3d.region
+
+        position_text = location_3d_to_region_2d(context.region, rv3d, context.object.location)
+
+        font_id = 0
+        blf.position(font_id, 2, 80, 0)
+        blf.size(font_id, 20, 72)
+        blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
+
+        #calculate the line size in mm
+        length = ((context.object.matrix_world @ context.object.data.vertices[0].co - context.object.matrix_world @ context.object.data.vertices[1].co).length) * 1000
         
 
-#END OF OpeningsBoundsCreator ----------------------------------------------------------------------
+        blf.position(font_id, position_text[0], position_text[1], 0)
+        blf.draw(font_id, '%.2f mm' % length)
+
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
+
+        args = (self, context)
+        self._handle_3d = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback_3d, args, 'WINDOW', 'POST_VIEW')
+        self.draw_event = context.window_manager.event_timer_add(0.1, window=context.window)
+
+        #draw text 2D
+        self._handle_text_2D = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback_text_2D, args, 'WINDOW', 'POST_PIXEL')
+
+
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context: bpy.types.Context, event: bpy.types.Event):
+        context.area.tag_redraw()
+
+        if event.type in {'ESC'}:
+            #remove timer handler
+            context.window_manager.event_timer_remove(self.draw_event)
+            #remove lines handler
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle_3d, 'WINDOW')
+            #remove text handler
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2D, 'WINDOW')
+
+            return {'CANCELLED'}
+
+        return {'PASS_THROUGH'}
+            
 
 classes = [
     CurveAdder,
     BoundingsHaldler,
-    ExtraCurvesEnabler
+    ExtraCurvesEnabler,
+    FBXLibraryImporter,
+    OT_TestModalOperator,
+    OT_TestGPUDrawer
 ]
 
 

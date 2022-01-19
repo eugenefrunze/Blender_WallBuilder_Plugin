@@ -21,7 +21,7 @@ class WB_PT_CreatePanel(bpy.types.Panel):
             row.label(text=f'OBJECT: {context.object.name}')
 
             row = col.row()
-            row.label(text=f'GLOBAL TYPE: {context.object.global_props.global_type}')
+            row.label(text=f'GLOBAL TYPE: {context.object.props.type}')
 
         box = layout.box()
         col = box.column()
@@ -52,8 +52,32 @@ class WB_PT_CreatePanel(bpy.types.Panel):
         row = col.row()
         row.label(text='MEASURES TOOLS')
 
+        box = layout.box()
+        col = box.column()
         row = col.row()
-        row.operator(test.SizesDrawer.bl_idname, text='ENABLE MEASURES', icon='FILE_3D')
+        row.label(text='FBX IMPORTER')
+
+        row = col.row()
+        row.prop(context.scene.props, 'library_fbx_import_path')
+
+        row = col.row()
+        row.operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='Test Modal Operator')
+
+        row = col.row()
+        row.operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
+
+        box = layout.box()
+        col = box.column()
+        row = col.row()
+        row.label(text='OT_TestGPUDrawer')
+
+        row = col.row()
+        row.operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
 
 
 classes = [
