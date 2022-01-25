@@ -1,4 +1,5 @@
 import pathlib
+
 import bpy
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 import gpu
@@ -8,7 +9,6 @@ import blf
 from mathutils import Vector
 
 from . import data_types
-
 from . import utils
 from .utils import get_object_bounds_coords, get_bounder_vertices, set_parent
 
@@ -382,6 +382,8 @@ class OpeningsHandler(bpy.types.Operator):
                 print(self.nd_loc[1])
                 print(f'OPENING ADDED: {item.obj.name}')
         return {'FINISHED'}
+
+#end of openings handler operator ------------------------------------------------------------------
 
 
 #---------------------------------------------------------------------------------------------------

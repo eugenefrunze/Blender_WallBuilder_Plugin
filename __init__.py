@@ -5,7 +5,7 @@ bl_info = {
     "version": (0, 9),
     "blender": (3, 0, 0),
     "category": "UI",
-    "location": "Unknown",
+    "location": "View3D > Sidebar > WALL BUILDER / TOOLS & PROPS",
     "url": "https://blue7.it"
 }
 
