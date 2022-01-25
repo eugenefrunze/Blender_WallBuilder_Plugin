@@ -1,7 +1,7 @@
 import bpy
+from . import operators
 from . import data_types
 from . import utils
-from .wall_builder import wb_operators
 
 from bpy.props import PointerProperty, EnumProperty, \
     FloatProperty, BoolProperty, IntProperty, \
@@ -28,7 +28,7 @@ class WBProps(bpy.types.PropertyGroup):
 
     customer: EnumProperty(name='client preset',
         items=utils.get_customers_info(),
-        update=wb_operators.WallBuilder.set_customer_preset)
+        update=operators.WallBuilder.set_customer_preset)
 
     object_type: EnumProperty(
         name='object type',
@@ -37,7 +37,7 @@ class WBProps(bpy.types.PropertyGroup):
 
     is_inner_wall: BoolProperty(
         name='is inner wall',
-        update=wb_operators.WallBuilder.set_customer_preset,
+        update=operators.WallBuilder.set_customer_preset,
         default=False)
 
     level: EnumProperty(
@@ -52,17 +52,17 @@ class WBProps(bpy.types.PropertyGroup):
             ('OUTSIDE', 'Outside', '')
             ),
         default='INSIDE',
-        update=wb_operators.WallBuilder.set_wall_position)
+        update=operators.WallBuilder.set_wall_position)
 
     thickness: FloatProperty(
             name='wall thickness',
             default=0,
-            update=wb_operators.WallBuilder.set_wall_position)
+            update=operators.WallBuilder.set_wall_position)
 
     height: FloatProperty(
             name='height',
             default=0,
-            update=wb_operators.WallBuilder.set_wall_position)
+            update=operators.WallBuilder.set_wall_position)
 
     wall_profile_curve: PointerProperty(
         type=bpy.types.Object,

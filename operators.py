@@ -753,7 +753,6 @@ class OT_TestGPUDrawer(bpy.types.Operator):
         return {'PASS_THROUGH'}
             
 
-
 #---------------------------------------------------------------------------------------------------
 # resgister / unregister
 #---------------------------------------------------------------------------------------------------
@@ -794,6 +793,3 @@ def unregister():
     unregister_class(FBXLibraryImporter)
     unregister_class(OT_TestModalOperator)
     unregister_class(OT_TestGPUDrawer)
-
-if __name__ == '__main__':
-    register()
