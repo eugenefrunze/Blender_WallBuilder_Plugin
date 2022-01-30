@@ -1,3 +1,4 @@
+from multiprocessing import context
 import bpy
 from . import operators
 from . import data_types
@@ -42,7 +43,8 @@ class WBProps(bpy.types.PropertyGroup):
 
     level: EnumProperty(
         name='object level',
-        items=data_types.levels)
+        items=data_types.levels,
+        default='EG')
     
     position: EnumProperty(
         name='position',
@@ -56,11 +58,13 @@ class WBProps(bpy.types.PropertyGroup):
 
     thickness: FloatProperty(
             name='wall thickness',
+            unit='LENGTH',
             default=0,
             update=operators.WallBuilder.set_wall_position)
 
     height: FloatProperty(
             name='height',
+            unit='LENGTH',
             default=0,
             update=operators.WallBuilder.set_wall_position)
 
@@ -70,10 +74,12 @@ class WBProps(bpy.types.PropertyGroup):
 
     opening_elevation: FloatProperty(
             name='openings average elevation',
+            unit='LENGTH',
             default=0)
 
     elevation: FloatProperty(
             name='object global elevation',
+            unit='LENGTH',
             default=0)
 
     opening_type: EnumProperty(
@@ -82,6 +88,7 @@ class WBProps(bpy.types.PropertyGroup):
 
     opening_top_offset: FloatProperty(
             name='opening top offset',
+            unit='LENGTH',
             default=0)
 
     bounding_object: PointerProperty(
@@ -106,6 +113,31 @@ class OpeningsCollection(bpy.types.PropertyGroup):
     obj_id: IntProperty()
 
 #---------------------------------------------------------------------------------------------------
+# tools & props props
+#---------------------------------------------------------------------------------------------------
+
+class TObjectProps(bpy.types.PropertyGroup):
+    pass
+
+class TSceneProps(bpy.types.PropertyGroup):
+    fast_object_type: EnumProperty(
+        name='object type',
+        description='fast object type',
+        items=data_types.fast_objects_types,
+        default='RECTANGLE')
+
+    new_length: FloatProperty(
+        name = 'length',
+        unit='LENGTH',
+        default=1)
+    
+    new_width: FloatProperty(
+        name='width',
+        unit='LENGTH',
+        default=1)
+
+
+#---------------------------------------------------------------------------------------------------
 # register / unregister
 #---------------------------------------------------------------------------------------------------
 
@@ -127,6 +159,11 @@ def register():
     bpy.types.Object.openings = CollectionProperty(type=OpeningsCollection)
     bpy.types.Object.opening_index = IntProperty()
 
+    #tools props
+    register_class(TObjectProps)
+    register_class(TSceneProps)
+    bpy.types.Object.tools_props = bpy.props.PointerProperty(type=TObjectProps)
+    bpy.types.Scene.tools_props = bpy.props.PointerProperty(type=TSceneProps)
 
 
 def unregister():
@@ -146,3 +183,9 @@ def unregister():
     del bpy.types.Scene.wb_props
     del bpy.types.Object.openings
     del bpy.types.Object.opening_index
+
+    #tools props
+    unregister_class(TObjectProps)
+    unregister_class(TSceneProps)
+    del bpy.types.Object.tools_props
+    del bpy.types.Scene.tools_props

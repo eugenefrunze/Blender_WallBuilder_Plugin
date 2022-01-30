@@ -107,7 +107,6 @@ class WallBuilder(bpy.types.Operator):
                     points[3].co[0] = -thickness
                     points[3].co[1] = 0
 
-
     def generate_object(self, context) -> list:
         obj = context.object
         wb_props = obj.wb_props
@@ -326,22 +325,12 @@ class OpeningsHandler(bpy.types.Operator):
                 self.nd_loc[1] += 200
 
                 #-----------------------------------------------------------------------------------
-                # remove opening from children  -------- DOESNT WORK PROPERLY AT THE MOMENT
-
-                # THIS PART IS MORE PREFERABLE BUT DOESNT WORK FOR SOME REASON
-                # ctx_temp = context.copy()
-                # ctx_temp['selected_editable_objects'] = [obj.openings[idx]]
-                # ctx_temp['selected_objects'] = [obj.openings[idx]]
-                # print('SELECTED: {}'.format(ctx_temp['selected_objects']))
-                # print('SELECTED EDITABLE: {}'.format(ctx_temp['selected_editable_objects']))
-                # bpy.ops.object.parent_clear(ctx_temp, type='CLEAR_KEEP_TRANSFORM')
-
-                # THIS PART SIMPLIER AND WORKS
+                # remove opening from children. Must be optional --- REWORK --- %#$%$^%$
                 #check if object is not deleted, and opening is not refer to an empty object
-                if obj.openings[idx].obj.name in context.view_layer.objects:
-                    obj.openings[idx].obj.select_set(True)
-                    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-                    obj.openings[idx].obj.select_set(False)
+                # if obj.openings[idx].obj.name in context.view_layer.objects:
+                #     obj.openings[idx].obj.select_set(True)
+                #     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+                #     obj.openings[idx].obj.select_set(False)
                 #-----------------------------------------------------------------------------------
 
                 # removing opening from construction object
@@ -366,14 +355,12 @@ class OpeningsHandler(bpy.types.Operator):
                 obj.opening_index = len(obj.openings) - 1
 
                 #-----------------------------------------------------------------------------------
-                # setting the opening as child of obj -------- DOESNT WORK PROPERLY AT THE MOMENT
+                # setting the opening as child of obj. Must be optional --- REWORK --- %#$%$^%$
 
-                ctx_temp = context.copy()
-                ctx_temp['selected_editable_objects'] = [object]
-                ctx_temp['selected_objects'] = [object]
-                # ctx_temp['active_object'] = obj
-                # print('THE CRAP: {0}{1}'.format(ctx_temp['selected_editable_objects'], ctx_temp['selected_objects']))
-                bpy.ops.object.parent_set(ctx_temp, keep_transform=True)
+                # ctx_temp = context.copy()
+                # ctx_temp['selected_editable_objects'] = [object]
+                # ctx_temp['selected_objects'] = [object]
+                # bpy.ops.object.parent_set(ctx_temp, keep_transform=True)
                 #-----------------------------------------------------------------------------------
 
                 # putting the object to geom nodes modif
@@ -494,19 +481,22 @@ class CurveAdder(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     curve_type: bpy.props.StringProperty(
-        default='Line'
+        default=data_types.fast_objects_types[0][0]
     )
 
     def execute(self, context):
-        if self.curve_type == 'Line':
+        if self.curve_type == 'RECTANGLE':
+            curve = utils.curve_create_rectangle(self, context)
+        elif self.curve_type == 'LINE':
             #adding line
-            bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Line', shape='3D', use_cyclic_u=False)
-            bpy.ops.transform.resize(value=(1, 1, 0))
-            bpy.ops.curve.spline_type_set(type='POLY')
-            bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
-        elif self.curve_type == 'Rectangle':
-            pass
+            # bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Line', shape='3D', use_cyclic_u=False)
+            # bpy.ops.transform.resize(value=(1, 1, 0))
+            # bpy.ops.curve.spline_type_set(type='POLY')
+            # bpy.ops.object.mode_set(mode='OBJECT')
+            # bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
+
+            curve = utils.curve_create_line(self, context, (0, 0, 0, 1), (3, 0, 0, 1))
+            print(curve.name)
 
         return {'FINISHED'}
 

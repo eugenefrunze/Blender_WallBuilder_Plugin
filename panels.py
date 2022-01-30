@@ -170,7 +170,10 @@ class TPanel(bpy.types.Panel):
         box = layout.box()
         col = box.column()
         row = col.row()
-        row.label(text='PARAMETERS')
+        row.label(text='GLOBAL PARAMETERS')
+
+        row = col.row()
+        row.prop(bpy.data.scenes["Scene"].unit_settings, 'length_unit')
 
         row = col.row()
         row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
@@ -181,7 +184,27 @@ class TPanel(bpy.types.Panel):
         row.label(text='CREATE OBJECTS')
 
         row = col.row()
-        row.operator(operators.CurveAdder.bl_idname, text='ADD CURVE', icon='MOD_CURVE')
+        row.prop(context.scene.tools_props, 'fast_object_type')
+
+        if context.scene.tools_props.fast_object_type == 'RECTANGLE':
+            row = col.row(align=False)
+            row.prop(context.scene.tools_props, 'new_length')
+            row.prop(context.scene.tools_props, 'new_width')
+        elif context.scene.tools_props.fast_object_type == 'LINE':
+            row = col.row()
+            row.prop(context.scene.tools_props, 'new_length')
+
+        row = col.row()
+        row.operator(operators.CurveAdder.bl_idname, text='ADD OBJECT', icon='MOD_CURVE').curve_type = \
+        context.scene.tools_props.fast_object_type
+        
+        try:
+            spline = context.object.data.splines[0]
+        except AttributeError:
+            pass
+        else:
+            row = col.row()
+            row.prop(spline, 'use_cyclic_u', text='close wall shape')
 
         box = layout.box()
         col = box.column()

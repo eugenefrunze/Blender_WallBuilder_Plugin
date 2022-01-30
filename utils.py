@@ -3,33 +3,12 @@ from . import data_types
 import urllib.request, urllib.error, json
 from json.decoder import JSONDecodeError
 
-#generate customers list from API
-def get_customers_info():
-    interface_list_generated = []
-    url = 'https://www.bauvorschau.com/api/clients_measures'
-    errmessage = 'BBP->Utils->get_customers_info(): '
-    try:
-        responce = urllib.request.urlopen(url)
-    except urllib.error.URLError as err:
-        print(errmessage, err)
-        return [('URL_ERR', 'CUSTOMERS DATA NOT LOADED', 'error in the utils->get_customers_info()->urlopen()')]
-    else:
-        try:
-            customers = json.loads(responce.read())
-        except JSONDecodeError as err:
-            print(errmessage, err)
-            return [('JSON_ERR', 'CUSTOMERS DATA NOT LOADED', 'error in the Butils->get_customers_info()->json.loads()')]
-        else:
-            data_types.customers_json = customers
-            for customer in customers:
-                interface_list_generated.append((customer['ucm_id'], customer['mc_name'], ''))
-
-            return interface_list_generated
+from mathutils import Vector
 
 
-
-
-# BASIC OPERATIONS ---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+# BASIC OPERATIONS
+#---------------------------------------------------------------------------------------------------
 
 #set object parent
 def set_parent(children: list, parent: bpy.types.Object, keep_transform: bool, context: bpy.context) -> None:
@@ -40,16 +19,13 @@ def set_parent(children: list, parent: bpy.types.Object, keep_transform: bool, c
     ctx['selected_editable_objects'] = children
     bpy.ops.object.parent_set(ctx, keep_transform=keep_transform)
 
-    
+
+#---------------------------------------------------------------------------------------------------
+# CUSTOM OPERATIONS
+#---------------------------------------------------------------------------------------------------
 
 
-
-# CUSTOM OPERATIONS --------------------------------------------------------------------------------
-
-#geom nodes connector method
-def node_group_link(node_group, node1_output, node2_input):
-    node_group.links.new(node1_output, node2_input)
-
+#objects generation --------------------------------------------------------------------------------
 
 #get object's bounds in coords
 def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> tuple:
@@ -80,7 +56,6 @@ def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> 
     
     return (x_max, y_max, z_max, x_min, y_min, z_min)
 
-
 #get object's bounds vertices indices
 def get_bounder_vertices(object: bpy.types.Object) -> list:
     """gets parallelepiped object that will be used as bounding box,
@@ -99,3 +74,88 @@ def get_bounder_vertices(object: bpy.types.Object) -> list:
                 v_idxs[idx + 3] = list(p.vertices)
 
     return v_idxs
+
+#curves generators
+def curve_create_line(self, context, start: tuple, end: tuple) -> bpy.types.Object:
+    bpy.ops.curve.simple(
+        align='WORLD', 
+        location=(0, 0, 0), 
+        rotation=(0, 0, 0), 
+        Simple_Type='Line', 
+        shape='2D', 
+        outputType='POLY', 
+        use_cyclic_u=False,
+        edit_mode=False)
+    obj = context.object
+    mat_world = obj.matrix_world
+    obj.data.splines[0].points[0].co = mat_world.inverted() @ Vector(start)
+
+    point0_pos = obj.data.splines[0].points[0].co
+    obj.data.splines[0].points[1].co = (point0_pos[0] + context.scene.tools_props.new_length, point0_pos[1], point0_pos[2], point0_pos[3])
+    
+
+
+    # bpy.ops.transform.resize(value=(1, 1, 0))
+    # mat_world = obj.matrix_world
+    # obj.data.splines[0].points[0].co = mat_world.inverted() @ Vector(start)
+    # end_vec = Vector((start[0] + context.scene.tools_props.new_length, end[1], end[2], end[3]))
+    # print(end_vec)
+    # obj.data.splines[0].points[1].co = mat_world.inverted() @ end_vec
+    
+    context.object.data.fill_mode = 'NONE'
+    bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
+
+    return context.object
+
+def curve_create_rectangle(self, context) -> bpy.types.Object:
+    length = context.scene.tools_props.new_length
+    width = context.scene.tools_props.new_width
+    #create shape
+    bpy.ops.curve.simple(
+        align='WORLD', 
+        location=(0, 0, 0), 
+        rotation=(0, 0, 0), 
+        Simple_Type='Rectangle', 
+        Simple_width=width, 
+        Simple_length=length, 
+        shape='2D', 
+        outputType='POLY', 
+        use_cyclic_u=True, 
+        edit_mode = False)
+    #remove filling
+    context.object.data.fill_mode = 'NONE'
+    
+
+    return context.object
+
+#geometry nodes ------------------------------------------------------------------------------------
+
+#geom nodes connector method
+def node_group_link(node_group, node1_output, node2_input):
+    node_group.links.new(node1_output, node2_input)
+
+
+#web operations ------------------------------------------------------------------------------------
+
+#generate customers list from API
+def get_customers_info():
+    interface_list_generated = []
+    url = 'https://www.bauvorschau.com/api/clients_measures'
+    errmessage = 'BBP->Utils->get_customers_info(): '
+    try:
+        responce = urllib.request.urlopen(url)
+    except urllib.error.URLError as err:
+        print(errmessage, err)
+        return [('URL_ERR', 'CUSTOMERS DATA NOT LOADED', 'error in the utils->get_customers_info()->urlopen()')]
+    else:
+        try:
+            customers = json.loads(responce.read())
+        except JSONDecodeError as err:
+            print(errmessage, err)
+            return [('JSON_ERR', 'CUSTOMERS DATA NOT LOADED', 'error in the Butils->get_customers_info()->json.loads()')]
+        else:
+            data_types.customers_json = customers
+            for customer in customers:
+                interface_list_generated.append((customer['ucm_id'], customer['mc_name'], ''))
+
+            return interface_list_generated
