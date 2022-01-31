@@ -245,6 +245,9 @@ class TPanel(bpy.types.Panel):
 
         row = col.row()
         row.operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
+        
+        row = col.row()
+        row.operator(operators.OT_InfoDrawer.bl_idname, text='OT_InfoDrawer')
 
 
 #---------------------------------------------------------------------------------------------------

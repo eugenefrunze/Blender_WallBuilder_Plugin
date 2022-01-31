@@ -28,6 +28,7 @@ customers_json = []
 # ]
 
 levels = (
+    ('UNDEFINED', 'Undefined', ''),
     ('KG', 'KG (basement)', ''),
     ('EG', 'EG (1st floor)', ''),
     ('OG', 'OG (2nd floor)', ''),
@@ -53,10 +54,11 @@ class Objects_types:
 
 
 def get_objects_types():
+    undefined = Objects_types('UNDEFINED', 'Undefined', 'Undefined desc')
     wall = Objects_types('WALL', 'Wall', 'Wall desc')
     floor = Objects_types('FLOOR', 'Floor', 'Floor desc')
     opening = Objects_types('OPENING', 'Opening', 'Floor desc')
-    return (wall.get_prop_enum(), floor.get_prop_enum(), opening.get_prop_enum())
+    return (undefined.get_prop_enum(), wall.get_prop_enum(), floor.get_prop_enum(), opening.get_prop_enum())
 
 
 openings_types = (

@@ -34,7 +34,7 @@ class WBProps(bpy.types.PropertyGroup):
     object_type: EnumProperty(
         name='object type',
         items=data_types.get_objects_types(),
-        default='WALL')
+        default='UNDEFINED')
 
     is_inner_wall: BoolProperty(
         name='is inner wall',
@@ -44,7 +44,7 @@ class WBProps(bpy.types.PropertyGroup):
     level: EnumProperty(
         name='object level',
         items=data_types.levels,
-        default='EG')
+        default='UNDEFINED')
     
     position: EnumProperty(
         name='position',

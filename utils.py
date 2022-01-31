@@ -4,6 +4,8 @@ import urllib.request, urllib.error, json
 from json.decoder import JSONDecodeError
 
 from mathutils import Vector
+from bpy_extras.view3d_utils import location_3d_to_region_2d
+import blf
 
 
 #---------------------------------------------------------------------------------------------------
@@ -159,3 +161,39 @@ def get_customers_info():
                 interface_list_generated.append((customer['ucm_id'], customer['mc_name'], ''))
 
             return interface_list_generated
+
+# bgl/gpu/blf operations ---------------------------------------------------------------------------
+
+def draw_text_callback_2D(self, context: bpy.types.Context):
+    
+    v3d = context.space_data
+    rv3d = v3d.region_3d
+    
+    obj = context.object
+    dims = obj.dimensions
+    
+    font_id = 0
+    
+    if obj.wb_props.object_type == 'UNDEFINED':  
+        blf.color(font_id, 0.0, 1.0, 1.0, 1.0)
+    else:
+        blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
+    blf.size(font_id, 15, 72)
+    blf.position(font_id, 100, 40, 0)
+    blf.draw(font_id, f'Type: {obj.wb_props.object_type}')
+    
+    if obj.wb_props.level == 'UNDEFINED':  
+        blf.color(font_id, 0.0, 1.0, 1.0, 1.0)
+    else:
+        blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
+    blf.position(font_id, 100, 60, 0)
+    blf.draw(font_id, f'Level: {obj.wb_props.level}')
+    
+    position = location_3d_to_region_2d(context.region, rv3d, context.object.location)
+    blf.color(font_id, 1.0, 1.0, 1.0, 1.0)
+    blf.position(font_id, position[0], position[1], 0)
+    blf.draw(font_id, '%.2f m | %.2f m | %.2f m' % (dims[0], dims[1], dims[2]))
+    
+    blf.color(font_id, 1.0, 1.0, 1.0, 1.0)
+    blf.position(font_id, 100, 80, 0)
+    blf.draw(font_id, '%.2f m | %.2f m | %.2f m' % (dims[0], dims[1], dims[2]))

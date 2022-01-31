@@ -743,7 +743,32 @@ class OT_TestGPUDrawer(bpy.types.Operator):
             return {'CANCELLED'}
 
         return {'PASS_THROUGH'}
+
+
+class OT_InfoDrawer(bpy.types.Operator):
+        bl_idname = 'scene.info_drawer'
+        bl_label = 'project info'
+        bl_options = {'REGISTER', 'UNDO'}
+        
+        def invoke(self, context, event):
+            args = (self, context)
+            self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D, args, 'WINDOW', 'POST_PIXEL')
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+        
+        def modal(self, context: bpy.types.Context, event: bpy.types.Event):
+            context.area.tag_redraw()
             
+            if event.type in {'ESC'}:
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
+                return {'CANCELLED'}
+            
+            return {'PASS_THROUGH'}
+            
+            
+            
+            
+             
 
 #---------------------------------------------------------------------------------------------------
 # resgister / unregister
@@ -766,6 +791,7 @@ def register():
     register_class(FBXLibraryImporter)
     register_class(OT_TestModalOperator)
     register_class(OT_TestGPUDrawer)
+    register_class(OT_InfoDrawer)
 
 
 def unregister():
@@ -785,3 +811,4 @@ def unregister():
     unregister_class(FBXLibraryImporter)
     unregister_class(OT_TestModalOperator)
     unregister_class(OT_TestGPUDrawer)
+    unregister_class(OT_InfoDrawer)
