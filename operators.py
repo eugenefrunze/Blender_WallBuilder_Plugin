@@ -1,21 +1,49 @@
+from ctypes import cast
+from email.mime import base
 import pathlib
+
 
 import bpy
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 import gpu
 from gpu_extras.batch import batch_for_shader
 import bgl
-import blf
+import blf 
 from mathutils import Vector
 
 from . import data_types
 from . import utils
-from .utils import get_object_bounds_coords, get_bounder_vertices, set_parent
-
+from .utils import get_edges_of_selected_verts_2, get_object_bounds_coords, get_bounder_vertices, set_parent, \
+get_vector_from_coordinates, get_vector_center, select_none, set_active, set_boundings_for_object, get_bounder_face
 
 #---------------------------------------------------------------------------------------------------
 # wall builder operators
 #---------------------------------------------------------------------------------------------------
+
+class CustomersBaseHandler(bpy.types.Operator):
+    bl_idname = 'scene.customers_base_handler'
+    bl_label = 'customers_base_handler'
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context: bpy.types.Context):
+        utils.get_customers_info()
+        # print(data_types.customers_json)
+        print('--------------------------')
+        for idx, item in enumerate(data_types.customers_json):
+            if len(data_types.customers_json) > len(context.scene.customers_data):
+                context.scene.customers_data.add()
+            print(len(context.scene.customers_data))
+            for key in item.keys():
+                try:
+                    if item[key]:
+                        context.scene.customers_data[idx][key] = int(item[key])
+                except ValueError:
+                    if item[key]:
+                        context.scene.customers_data[idx][key] = str(item[key])
+            print('--------------------------')
+        return {'FINISHED'}
+        
+#end of customers base handler operator ------------------------------------------------------------
+
 
 class WallBuilder(bpy.types.Operator):
     bl_idname = 'object.wall_builder'
@@ -35,6 +63,7 @@ class WallBuilder(bpy.types.Operator):
             for customer in data_types.customers_json:
                 if customer['ucm_id'] == obj_converted.wb_props.customer:
                     obj_converted.wb_props.height = float(customer['wall_height']) / 1000
+                    obj_converted.wb_props.opening_top_offset = float(customer['windows_top']) / 1000
                     if self.is_inner_wall:
                         obj_converted.wb_props.thickness = float(customer['wall_in_thickness']) / 1000
                     else:
@@ -323,16 +352,6 @@ class OpeningsHandler(bpy.types.Operator):
                 # deleting object from geom nodes modifier and refreshing geom nodes modifier
                 self.remove_opening_from_geom_nodes(obj, obj.openings[idx].obj)
                 self.nd_loc[1] += 200
-
-                #-----------------------------------------------------------------------------------
-                # remove opening from children. Must be optional --- REWORK --- %#$%$^%$
-                #check if object is not deleted, and opening is not refer to an empty object
-                # if obj.openings[idx].obj.name in context.view_layer.objects:
-                #     obj.openings[idx].obj.select_set(True)
-                #     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-                #     obj.openings[idx].obj.select_set(False)
-                #-----------------------------------------------------------------------------------
-
                 # removing opening from construction object
                 obj.openings.remove(idx)
 
@@ -353,16 +372,6 @@ class OpeningsHandler(bpy.types.Operator):
                 item.obj = object
                 item.obj_id = len(obj.openings)
                 obj.opening_index = len(obj.openings) - 1
-
-                #-----------------------------------------------------------------------------------
-                # setting the opening as child of obj. Must be optional --- REWORK --- %#$%$^%$
-
-                # ctx_temp = context.copy()
-                # ctx_temp['selected_editable_objects'] = [object]
-                # ctx_temp['selected_objects'] = [object]
-                # bpy.ops.object.parent_set(ctx_temp, keep_transform=True)
-                #-----------------------------------------------------------------------------------
-
                 # putting the object to geom nodes modif
                 self.add_opening_to_geom_nodes(obj, object, self.nd_loc)
                 self.nd_loc[1] -= 200
@@ -372,6 +381,54 @@ class OpeningsHandler(bpy.types.Operator):
 
 #end of openings handler operator ------------------------------------------------------------------
 
+
+class OpeningsAttacher(bpy.types.Operator):
+    bl_idname = 'object.openings_attacher'
+    bl_label = 'attach_openings'
+    
+    action: bpy.props.StringProperty()
+    
+    
+    def execute(self, context: bpy.types.Context):
+        obj: bpy.types.Object = bpy.context.object
+        
+        #set the action, depending on the presence of openings
+        if len(obj.children) > 0: self.action = 'DETACH'
+        else: self.action = 'ATTACH'
+                
+        print(len(obj.openings))
+            
+        if self.action == 'ATTACH':
+            select_none()
+            ctx_temp = context.copy()
+            for opening in obj.openings:
+                ctx_temp['selected_editable_objects'].append(opening.obj)
+                ctx_temp['selected_objects'].append(opening.obj)
+            bpy.ops.object.parent_set(ctx_temp, keep_transform=True)
+            self.report({'INFO'}, 'ALL OPENINGS HAVE BEEN ATTACHED')
+        if self.action == 'DETACH':
+            select_none()
+            for opening in obj.openings:
+                opening.obj.select_set(True)
+            obj.select_set(True)
+            bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+            self.report({'INFO'}, 'ALL OPENINGS HAVE BEEN DETACHED')
+        
+        return {'FINISHED'}
+    
+class OpeningsAligner(bpy.types.Operator):
+    bl_idname = 'object.openings_aligner'
+    bl_label = 'align_openings'
+    
+    def execute(self, context: bpy.types.Object):
+        obj: bpy.types.Object = context.object
+        for opening in obj.openings:
+            if opening.obj.wb_props.helper_type == 'WINDOW':
+                bounds = get_object_bounds_coords(opening.obj, 'WORLD')
+                opening.obj.location[2] = (obj.location[2] + obj.wb_props.opening_top_offset) - (bounds[2] - opening.obj.location[2])
+            
+        self.report({'INFO'}, 'Openings aligned')
+        return {'FINISHED'}
 
 #---------------------------------------------------------------------------------------------------
 # building assembler operator
@@ -456,6 +513,59 @@ class BuildingAssembler(bpy.types.Operator):
         info = 'BUILDING HAS ASSEMBLED'
         self.report({'INFO'}, info)
         return {'FINISHED'}
+    
+# building assembler operator ----------------------------------------------------------------------
+
+
+class SnappingCopyHandler(bpy.types.Operator):
+    bl_idname = 'object.snapping_copy_handler'
+    bl_label = 'snapping_copy_handler'
+    
+    action: bpy.props.StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object in context.selected_objects
+    
+    def execute(self, context: bpy.types.Context):
+        base_wall = context.object
+        cast_obj = None
+        if self.action == 'ADD':
+            #create copy of wall object
+            bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'},
+            TRANSFORM_OT_translate={"value":(0, 0, 0), "orient_axis_ortho":'X',
+                                    "orient_type":'GLOBAL', "orient_matrix":((0, 0, 0), (0, 0, 0), (0, 0, 0)),
+                                    "orient_matrix_type":'GLOBAL', "constraint_axis":(False, False, False),})    
+            bpy.ops.object.convert(target='MESH')
+            cast_obj = context.object
+            base_wall.wb_props.snapping_cast = cast_obj
+            cast_obj.name = base_wall.name + '_CAST'
+            set_active(base_wall)
+            select_none()
+            cast_obj.select_set(True)
+            base_wall.select_set(True)
+            bpy.ops.object.parent_set(keep_transform=True)
+            cast_obj.display_type = 'WIRE'
+            cast_obj.wb_props.object_type = 'HELPER'
+            # bpy.ops.collection.objects_remove_active()
+            cast_obj.hide_select = True
+            base_wall.select_set(True)
+        elif self.action == 'REMOVE':
+            select_none()
+            base_wall.wb_props.snapping_cast.hide_select = False
+            #link cast to walls collection
+            try:
+                base_wall.users_collection[0].objects.link(base_wall.wb_props.snapping_cast)
+            except RuntimeError:
+                pass
+            set_active(base_wall.wb_props.snapping_cast)
+            base_wall.wb_props.snapping_cast.select_set(True)
+            bpy.ops.object.delete()
+            base_wall.wb_props.snapping_cast = None
+            set_active(base_wall)
+            
+        self.report({'INFO'}, 'Snapping copy hander has finished')
+        return {'FINISHED'}
 
 
 #---------------------------------------------------------------------------------------------------
@@ -510,41 +620,6 @@ class BoundingsHaldler(bpy.types.Operator):
     def poll(cls, context):
         return context.object is not None and context.object.type == 'MESH'
 
-
-    # custom methods -------------------------------------------------------------------------------
-
-    def set_boundings_for_object(self, object, context):
-        object = context.object
-        #get object's bounds
-        obj_bounds_cords = get_object_bounds_coords(object, 'WORLD')
-        # print(obj_bounds_cords)
-        #create bounds object
-        bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-        bounds_obj = context.object
-        bounds_obj.props.type = 'BOUNDING'
-        bounds_obj.display_type = 'WIRE'
-        bnds_obj_sides = get_bounder_vertices(bounds_obj)
-        for idx, v_grp in enumerate(bnds_obj_sides):
-            print(v_grp)
-            for v_ind in v_grp:
-                if idx < 3:
-                    bounds_obj.data.vertices[v_ind].co[idx] = obj_bounds_cords[idx]
-                    # print(f'object: {bounds_obj.name}, vertex: {bounds_obj.data.vertices[v_ind]}, co:{bounds_obj.data.vertices[v_ind].co[idx]}')
-                else:
-                    bounds_obj.data.vertices[v_ind].co[idx-3] = obj_bounds_cords[idx]
-                    # print(f'object: {bounds_obj.name}, vertex: {bounds_obj.data.vertices[v_ind]}, co:{bounds_obj.data.vertices[v_ind].co[idx-3]}')
-        
-        #setting origin to the center of bounding
-        bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
-
-        #setting bounding object as parent for opening
-        set_parent([object], bounds_obj, True, context)
-
-        #setting bounding object to an opening object parameter 'bounding_object'
-        object.wb_props.bounding_object = bounds_obj
-
-
-    #class methods ---------------------------------------------------------------------------------
     def execute(self, context):
         obj = context.object
         #check if the object is not of bounding type
@@ -553,7 +628,8 @@ class BoundingsHaldler(bpy.types.Operator):
             return {'CANCELLED'}
 
         if obj.wb_props.bounding_object == None:
-            self.set_boundings_for_object(obj, context)
+            set_boundings_for_object(obj, context, True)
+            
             self.report({'INFO'}, 'Bounding object created successfully')
             return {'FINISHED'}
         else:
@@ -564,7 +640,7 @@ class BoundingsHaldler(bpy.types.Operator):
                 print(err, 'Reason: Object had dead bounding object. Created a new one')
                 self.report({'INFO'}, 'Object had dead bounding object. Created a new one')
                 obj.wb_props.bounding_object = None
-                self.set_boundings_for_object(obj, context)
+                set_boundings_for_object(obj, context, True)
                 return {'FINISHED'}
             else:
                 print('Object already has a bounding object')
@@ -745,70 +821,85 @@ class OT_TestGPUDrawer(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
 
-class OT_InfoDrawer(bpy.types.Operator):
-        bl_idname = 'scene.info_drawer'
+class OT_SizesDrawer(bpy.types.Operator):
+        bl_idname = 'scene.sizes_drawer'
         bl_label = 'project info'
-        bl_options = {'REGISTER', 'UNDO'}
+        bl_options = {'REGISTER'}
         
-        def invoke(self, context, event):
-            args = (self, context)
+        def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
+            
+            
+            obj = context.object
+            points_selected = utils.get_selected_points(obj)
+            
+            max_idx = len(obj.data.splines[0].points) - 1
+            pairs = utils.get_points_pairs(points_selected, max_idx)
+            print(f'PAIRS ARE: {pairs}')
+            #get data to draw sizes of
+            #1. get pairs or structure
+            # pairs = [[0,1,0],[4,7,0],[8,12,9]]
+            
+            
+            
+            # size_vector = get_vector_from_coordinates(points_selected[0].co, points_selected[1].co)   
+            # print(size_vector)
+            
+            # length_v = size_vector.length
+            
+            # center = get_vector_center(size_vector)
+            # print(center)
+            
+            # p_sel_new = points_selected[0].co.copy()
+            # p_sel_new.resize(3)
+            
+            # #determine args to send to drawcall  
+            args = (self, context, pairs, obj)
+            
+            # self._handle_ruler_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_size_ruler_3D, args, 'WINDOW', 'POST_VIEW')
             self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D, args, 'WINDOW', 'POST_PIXEL')
+
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
         
         def modal(self, context: bpy.types.Context, event: bpy.types.Event):
             context.area.tag_redraw()
-            
+                        
             if event.type in {'ESC'}:
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
+                # bpy.types.SpaceView3D.draw_handler_remove(self._handle_ruler_3d, 'WINDOW')
                 return {'CANCELLED'}
             
             return {'PASS_THROUGH'}
             
             
-            
-            
-             
-
 #---------------------------------------------------------------------------------------------------
 # resgister / unregister
 #---------------------------------------------------------------------------------------------------
 
+classes = (
+    CustomersBaseHandler,
+    WallBuilder,
+    OpeningsHandler,
+    OpeningsAttacher,
+    OpeningsAligner,
+    BuildingAssembler, 
+    SnappingCopyHandler,
+    CurveAdder,
+    BoundingsHaldler,
+    ExtraCurvesEnabler,
+    FBXLibraryImporter,
+    OT_TestModalOperator,
+    OT_TestGPUDrawer,
+    OT_SizesDrawer
+)
+
 def register():
     from bpy.utils import register_class
-
-    #wall builder operators
-    register_class(WallBuilder)
-    register_class(OpeningsHandler)
-
-    #builder assembler
-    register_class(BuildingAssembler)
-
-    # tools operators
-    register_class(CurveAdder)
-    register_class(BoundingsHaldler)
-    register_class(ExtraCurvesEnabler)
-    register_class(FBXLibraryImporter)
-    register_class(OT_TestModalOperator)
-    register_class(OT_TestGPUDrawer)
-    register_class(OT_InfoDrawer)
+    for cls in classes:
+        register_class(cls)
 
 
 def unregister():
     from bpy.utils import unregister_class
-
-    #wall builder operators
-    unregister_class(WallBuilder)
-    unregister_class(OpeningsHandler)
-
-    #builder assembler
-    unregister_class(BuildingAssembler)
-
-    #tools operators
-    unregister_class(CurveAdder)
-    unregister_class(BoundingsHaldler)
-    unregister_class(ExtraCurvesEnabler)
-    unregister_class(FBXLibraryImporter)
-    unregister_class(OT_TestModalOperator)
-    unregister_class(OT_TestGPUDrawer)
-    unregister_class(OT_InfoDrawer)
+    for cls in classes:
+        unregister_class(cls)

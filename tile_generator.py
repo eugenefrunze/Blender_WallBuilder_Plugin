@@ -1,37 +1,10 @@
-import time
-import math
-import pathlib
 import bpy
-import bmesh
 from mathutils import Vector
-from mathutils import Matrix
-
-# CONSTANTS ======================================================================================================
-
-TIME_START = time.time()
-PLUGIN_NAME: str = "CRAFTOID"
-PLUGIN_VERSION: float = 0.1
-BLENDER_VERSIONS: list[float] = [2.93]
-
-# blender plugin INFO
-bl_info = {
-    "name": "Big Blender Plugin (addon)",
-    "description": "the main template for the future plugin",
-    "author": "miloslavsky",
-    "version": PLUGIN_VERSION,
-    "blender": BLENDER_VERSIONS,
-    "category": "UI",
-    "location": "Unknown",
-    "url": ""
-}
-
-
-# INTERFACE ======================================================================================================
 
 class MainPanel(bpy.types.Panel):
-    bl_idname = "VIEW3D_PT_MainPanel"
-    bl_label = "{} plugin".format(PLUGIN_NAME)
-    bl_category = PLUGIN_NAME.capitalize()
+    bl_idname = 'VIEW3D_PT_MainPanel'
+    bl_label = 'Tile Generator panel'
+    bl_category = 'TILE GENERATOR'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
@@ -260,16 +233,6 @@ class TileGenerator(bpy.types.Operator):
         default='FAST'
     )
 
-    # @classmethod
-    # def poll(cls, context):
-    #     obj = context.object
-
-    #     if obj is not None:
-    #         if obj.mode == 'OBJECT':
-    #             return True
-
-    #     return False
-
     def execute(self, context):
 
         polygons_selected_indices = []
@@ -457,7 +420,7 @@ class TileGenerator(bpy.types.Operator):
 
 # REGISTERING ======================================================================================================
 
-CLASSES = (
+classes = (
     MainPanel,
     TileGenerator,
     VertexSelector,
@@ -467,7 +430,7 @@ CLASSES = (
 )
 
 def register():
-    for cls in CLASSES:
+    for cls in classes:
         bpy.utils.register_class(cls)
 
     bpy.types.Object.tiles_count_x = bpy.props.IntProperty(
@@ -522,7 +485,7 @@ def register():
 
 
 def unregister():
-    for cls in CLASSES:
+    for cls in classes:
         bpy.utils.unregister_class(cls)
 
     del bpy.types.Object.tiles_count_x
@@ -532,11 +495,3 @@ def unregister():
     del bpy.types.Object.tgen_proxy_name
     del bpy.types.Scene.test_prop_caller
     del bpy.types.MeshPolygon.selected_roof_polygon
-
-if __name__ == "__main__":
-    register()
-
-
-# CALCULATING THE TIME USED TO LOAD THE ENTIRE SCRIPT ====================================================================
-
-print("the time is: %.4f sec" % (time.time() - TIME_START))

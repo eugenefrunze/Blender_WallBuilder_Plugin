@@ -1,3 +1,4 @@
+from ast import operator
 import bpy
 from . import operators
 
@@ -34,12 +35,16 @@ class WBPanel(bpy.types.Panel):
             # tex = bpy.data.textures['jopa']
             # col.template_preview(tex, show_buttons=False)
 
+            # row = col.row()
+            # row.operator(operators.CustomersBaseHandler.bl_idname, text='GET CUSTOMERS INFO')
+
             row = col.row()
             row.label(text='OBJECT: {} ({})'.format(context.object.name, context.object.type))
-
-            col = layout.column()
+            
+            box = layout.box()
+            col = box.column()
             row = col.row()
-            row.label(text='OBJECT PROPERTIES:')
+            row.label(text='OBJECT PROPS:')
 
             row = col.row()
             row.prop(context.object.wb_props, 'customer')
@@ -49,9 +54,6 @@ class WBPanel(bpy.types.Panel):
 
             #IF WALL
             if context.object.wb_props.object_type == 'WALL':
-
-                row = col.row()
-                row.prop(context.object.wb_props, 'is_inner_wall')
 
                 row = col.row()
                 row.prop(context.object.wb_props, 'level')
@@ -77,6 +79,9 @@ class WBPanel(bpy.types.Panel):
                     pass
                 else:
                     row.prop(spline, 'use_cyclic_u', text='close wall shape')
+                    
+                row = col.row()
+                row.prop(context.object.wb_props, 'is_inner_wall')
 
                 #CONVERT OR RESET THE OBJECT -------------------------------------------------------
                 if context.object.wb_props.is_converted:
@@ -90,19 +95,38 @@ class WBPanel(bpy.types.Panel):
                 if context.object.wb_props.is_converted:
                     scn = bpy.context.scene
 
+                    box = layout.box()
+                    col = box.column()
+                    row = col.row()
+                    row.label(text='OPENINGS:')
                     row = col.row()
                     row.template_list('OPENINGS_UL_Item', '', bpy.context.object, 'openings', bpy.context.object, 'opening_index', rows=1)
 
                     row = col.row(align=True)
+                    
                     row.operator('object.opnenings_adder', text='ADD OPENINGS').action = 'ADD'
                     row.operator('object.opnenings_adder', text='REMOVE OPENING').action = 'REMOVE'
                     row.operator('object.opnenings_adder', icon='TRIA_UP', text='').action = 'UP'
                     row.operator('object.opnenings_adder', icon='TRIA_DOWN', text='').action = 'DOWN'
+                    
+                    col = box.column()
 
+                    row = col.row()
+                    row.operator(operators.OpeningsAttacher.bl_idname, text='ATTACH / DETACH OPENINGS')
+                    
+                    row = col.row()
+                    row.operator(operators.OpeningsAligner.bl_idname, text='ALIGN OPENINGS')
+                    
+                    
             #IF OPENING
             elif context.object.wb_props.object_type == 'OPENING':
                 row = col.row()
                 row.prop(context.object.wb_props, 'opening_type')
+
+            #IF HELPER
+            elif context.object.wb_props.object_type == 'HELPER':
+                row = col.row()
+                row.prop(context.object. wb_props, 'helper_type')
 
             #IF FLOOR
             elif context.object.wb_props.object_type == 'FLOOR':
@@ -118,16 +142,31 @@ class WBPanel(bpy.types.Panel):
                     row = col.row()
                     props = row.operator(operators.WallBuilder.bl_idname, text='CONVERT FLOOR', icon='SHADERFX')
 
-            layout = self.layout
-            col = layout.column()
+            box = layout.box()
+            col = box.column()
             row=col.row()
-            row.label(text='GLOBAL PROPERTIES:')
+            row.label(text='ADDITIONAL WBUILDER TOOLS')
+
+            #SNAPPING CAST
+            row = col.row()
+            if context.object.wb_props.snapping_cast and context.object.wb_props.object_type == 'WALL':
+                row.label(text=f'CAST OBJECT: {context.object.wb_props.snapping_cast.name}')
+                row = col.row()
+                row.operator(operators.SnappingCopyHandler.bl_idname, text='REMOVE SNAPPING CAST').action = 'REMOVE'
+            elif context.object.wb_props.object_type == 'WALL':
+                row.operator(operators.SnappingCopyHandler.bl_idname, text='CREATE CAST FOR SNAPPING').action = 'ADD'
+
+            box = layout.box()
+            col = box.column()
+            row=col.row()
+            row.label(text='AUTO ASSEMBLER PROPS:')
+            
 
             row=col.row()
             plans_collection = row.prop(data=context.scene.wb_props,property='plans_collection', slider=True)
 
             row = col.row()
-            row.prop(data=context.scene.wb_props,property='alignment_object', slider=True)     
+            row.prop(data=context.scene.wb_props,property='alignment_object', slider=True)
 
             row = col.row()
             row.operator(operators.BuildingAssembler.bl_idname, text='ASSEMBLE THE BUILDING')
@@ -159,29 +198,11 @@ class TPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         col = layout.column()
-        
-        if context.object:
-            row = col.row()
-            row.label(text=f'OBJECT: {context.object.name}')
-
-            row = col.row()
-            row.label(text=f'GLOBAL TYPE: {context.object.props.type}')
 
         box = layout.box()
         col = box.column()
         row = col.row()
-        row.label(text='GLOBAL PARAMETERS')
-
-        row = col.row()
-        row.prop(bpy.data.scenes["Scene"].unit_settings, 'length_unit')
-
-        row = col.row()
-        row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
-
-        box = layout.box()
-        col = box.column()
-        row = col.row()
-        row.label(text='CREATE OBJECTS')
+        row.label(text='FAST OBJECTS')
 
         row = col.row()
         row.prop(context.scene.tools_props, 'fast_object_type')
@@ -212,42 +233,33 @@ class TPanel(bpy.types.Panel):
         row.label(text='OPENINGS TOOLS')
 
         row = col.row()
-        row.operator(operators.BoundingsHaldler.bl_idname, text='CREATE BOUNDS', icon='FILE_3D')
+        row.operator(operators.BoundingsHaldler.bl_idname, text='CREATE OPENING BOUNDS', icon='FILE_3D')
 
         box = layout.box()
         col = box.column()
         row = col.row()
-        row.label(text='MEASURES TOOLS')
-
-        box = layout.box()
-        col = box.column()
+        row.label(text='TEST PROPERTIES')
+        
         row = col.row()
-        row.label(text='FBX IMPORTER')
-
+        row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
+        
         row = col.row()
-        row.prop(context.scene.props, 'library_fbx_import_path')
+        row.prop(bpy.data.scenes["Scene"].unit_settings, 'length_unit', text='global units')
+        
+        row = col.row()
+        row.prop(context.scene.props, 'library_fbx_import_path', text='fbx path')
 
         row = col.row()
         row.operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
-
-        box = layout.box()
-        col = box.column()
-        row = col.row()
-        row.label(text='Test Modal Operator')
-
-        row = col.row()
-        row.operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
-
-        box = layout.box()
-        col = box.column()
-        row = col.row()
-        row.label(text='OT_TestGPUDrawer')
-
+        
         row = col.row()
         row.operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
         
         row = col.row()
-        row.operator(operators.OT_InfoDrawer.bl_idname, text='OT_InfoDrawer')
+        row.operator(operators.OT_SizesDrawer.bl_idname, text='DRAW CURVE SIZES')
+        
+        row = col.row()
+        row.operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
 
 
 #---------------------------------------------------------------------------------------------------

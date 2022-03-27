@@ -1,0 +1,13 @@
+Hello to all Blender enthusiasts. I have some questions about rendering text in viewports using the blf module. Here is my code:
+
+1. When I run FontDrawerOperator and drawtextclass.draw() method is called with blf.size(font_id, 20, 72), it draws this giant 170 meters text lying in the viewport. If I reduce the size to 4 in blf.size(font_id, 4, 72), then I get this shimmery smudge. I experimented with different values, but the text is either too large or small and blurry
+
+2. How can I make the text always look at me in the viewport. Do I need additional methods for rotating and positioning text in screen space?
+
+
+3. Is there a better way to place remove_handle() and draw() methods inside a FontDrawerOperator (not in DrawTextClass), to toggle drawing on and off without keeping track of the DrawTextClass instance every time via bpy.app.driver_namespace?
+
+4. In order to draw the text and lines I need in the viewport, should I go deeper into learning opengl, as suggested in the official Blender documentation in the bgl section?
+
+
+I apologize for the confusion, but the official documentation contains only simple examples and does not really explain anything. I would be happy to figure these out on my own, but the information on the Web is fragmented and scattered. Thanks!
