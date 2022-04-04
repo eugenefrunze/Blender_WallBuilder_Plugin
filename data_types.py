@@ -67,7 +67,8 @@ openings_types = (
 
 helper_types = (
     ('WINDOW', 'Window helper', ''),
-    ('DOOR', 'Door hepler', '')
+    ('DOOR', 'Door hepler', ''),
+    ('CAST', 'Cast object', '')
 )
 
 wall_types = (

@@ -296,6 +296,8 @@ def get_bounder_face(bounds_obj: bpy.types.Object) -> list:
             polygons[1] = p
     
     return [polygons, face_size]
+
+# def get_objects_distance(first: bpy.types.Object, second)
             
     
 

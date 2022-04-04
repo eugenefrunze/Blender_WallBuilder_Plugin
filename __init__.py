@@ -14,7 +14,7 @@ from . import utils
 from . import operators
 from . import properties
 from . import panels
-from . import tile_generator
+# from . import tile_generator
 
 #---------------------------------------------------------------------------------------------------
 # TEST-EDU PART HERE -------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ def register():
     panels.register()
     operators.register()
     properties.register()
-    tile_generator.register()
+    # tile_generator.register()
 
 #---------------------------------------------------------------------------------------------------
 # TEST-EDU PART HERE -------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ def unregister():
     panels.unregister()
     operators.unregister()
     properties.unregister()
-    tile_generator.unregister()
+    # tile_generator.unregister()
 
 #---------------------------------------------------------------------------------------------------
 # TEST-EDU PART HERE -------------------------------------------------------------------------------

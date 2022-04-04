@@ -148,13 +148,23 @@ class WBPanel(bpy.types.Panel):
             row.label(text='ADDITIONAL WBUILDER TOOLS')
 
             #SNAPPING CAST
+            # row = col.row()
+            # if context.object.wb_props.snapping_cast and context.object.wb_props.object_type == 'WALL':
+            #     row.label(text=f'CAST OBJECT: {context.object.wb_props.snapping_cast.name}')
+            #     row = col.row()
+            #     row.operator(operators.SnappingCopyHandler.bl_idname, text='REMOVE SNAPPING CAST').action = 'REMOVE'
+            # elif context.object.wb_props.object_type == 'WALL':
+            #     row.operator(operators.SnappingCopyHandler.bl_idname, text='CREATE CAST FOR SNAPPING').action = 'ADD'
+
+            #MAIN CAST
             row = col.row()
-            if context.object.wb_props.snapping_cast and context.object.wb_props.object_type == 'WALL':
-                row.label(text=f'CAST OBJECT: {context.object.wb_props.snapping_cast.name}')
+            if context.object.wb_props.object_type == 'WALL':
+                row.operator(operators.MainCastHandler.bl_idname, text='CREATE MAIN CAST').action = 'ADD'
+            elif context.object.wb_props.object_type == 'HELPER' and context.object.wb_props.cast_source:
+                row.label(text=f'SOURCE OBJECT: {context.object.wb_props.cast_source}')
                 row = col.row()
-                row.operator(operators.SnappingCopyHandler.bl_idname, text='REMOVE SNAPPING CAST').action = 'REMOVE'
-            elif context.object.wb_props.object_type == 'WALL':
-                row.operator(operators.SnappingCopyHandler.bl_idname, text='CREATE CAST FOR SNAPPING').action = 'ADD'
+                row.operator(operators.MainCastHandler.bl_idname, text='REMOVE MAIN CAST').action = 'REMOVE'
+
 
             box = layout.box()
             col = box.column()

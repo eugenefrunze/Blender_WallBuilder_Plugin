@@ -14,7 +14,7 @@ from bpy.props import PointerProperty, EnumProperty, \
 #---------------------------------------------------------------------------------------------------
 
 class ObjectsProps(bpy.types.PropertyGroup):
-    type: StringProperty(name = 'global type of plugin object')
+    object_type: StringProperty(name = 'global type of plugin object')
 
 class SceneProps(bpy.types.PropertyGroup):
     library_fbx_import_path: StringProperty(subtype='DIR_PATH')
@@ -118,7 +118,12 @@ class WBProps(bpy.types.PropertyGroup):
         type=bpy.types.Object,
         description='the temporary snapping object useful to position objects on the walls'
     )
-
+    
+    cast_source: PointerProperty(
+        name='main cast source object',
+        type=bpy.types.Object,
+        description='the source spline object for temporary cast'
+    )
 
 class WBSceneProps(bpy.types.PropertyGroup):
     plans_collection: PointerProperty(

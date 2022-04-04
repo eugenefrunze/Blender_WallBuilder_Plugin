@@ -1,5 +1,4 @@
 from ctypes import cast
-from email.mime import base
 import pathlib
 
 
@@ -540,11 +539,13 @@ class SnappingCopyHandler(bpy.types.Operator):
             cast_obj = context.object
             base_wall.wb_props.snapping_cast = cast_obj
             cast_obj.name = base_wall.name + '_CAST'
+            #set cast as children of main base wall object
             set_active(base_wall)
             select_none()
             cast_obj.select_set(True)
             base_wall.select_set(True)
             bpy.ops.object.parent_set(keep_transform=True)
+            #setting additional parameters
             cast_obj.display_type = 'WIRE'
             cast_obj.wb_props.object_type = 'HELPER'
             # bpy.ops.collection.objects_remove_active()
@@ -565,6 +566,68 @@ class SnappingCopyHandler(bpy.types.Operator):
             set_active(base_wall)
             
         self.report({'INFO'}, 'Snapping copy hander has finished')
+        return {'FINISHED'}
+    
+class MainCastHandler(bpy.types.Operator):
+    bl_idname = 'object.main_cast_handler'
+    bl_label = 'main_cast_handler'
+    
+    action: bpy.props.StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object in context.selected_objects
+    
+    def execute(self, context: bpy.types.Context):
+        src_obj: bpy.types.Object
+        cast_obj: bpy.types.Object
+        if self.action == 'ADD':
+            src_obj = context.object
+            #create copy of wall object
+            bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'},
+            TRANSFORM_OT_translate={"value":(0, 0, 0), "orient_axis_ortho":'X',
+                                    "orient_type":'GLOBAL', "orient_matrix":((0, 0, 0), (0, 0, 0), (0, 0, 0)),
+                                    "orient_matrix_type":'GLOBAL', "constraint_axis":(False, False, False),})    
+            bpy.ops.object.convert(target='MESH')
+            cast_obj = context.object
+            cast_obj.wb_props.cast_source = src_obj
+            cast_obj.name = src_obj.name + '_CAST'
+            #set source object as children of cast object
+            set_active(cast_obj)
+            select_none()
+            cast_obj.select_set(True)
+            src_obj.select_set(True)
+            bpy.ops.object.parent_set(keep_transform=True)
+            #setting additional params
+            src_obj.display_type = 'WIRE'
+            cast_obj.wb_props.object_type = 'HELPER'
+            cast_obj.wb_props.helper_type = 'CAST'
+            src_obj.hide_select = True
+            cast_obj.select_set(True)
+        elif self.action == 'REMOVE':
+            cast_obj = context.object
+            select_none()
+            src_obj = cast_obj.wb_props.cast_source
+            src_obj.hide_select = False
+            #link cast ro walls collection
+            try:
+                cast_obj.users_collection[0].objects.link(src_obj)
+            except RuntimeError:
+                pass
+            src_obj.display_type = 'TEXTURED'
+            cast_obj.select_set(True)
+            src_obj.select_set(True)
+            bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+            select_none()
+            cast_obj.select_set(True)
+            set_active(cast_obj)
+            bpy.ops.object.delete()
+            src_obj.select_set(True)
+            set_active(src_obj)
+
+            
+            
+        self.report({'INFO'}, 'Object cast created')
         return {'FINISHED'}
 
 
@@ -713,6 +776,24 @@ class OT_TestModalOperator(bpy.types.Operator):
         self.report({'INFO'}, f'{self.bl_idname} EXECUTED {self.crap} {self.crap2}')
         return {'FINISHED'} 
 
+class OT_OpeningsDistDrawer(bpy.types.Operator):
+    bl_idname = 'object.dist_btw_openings_drawer'
+    bl_label = 'Draw distance between openings'
+    bl_options = {'REGISTER'}
+    
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return len(context.selected_objects) > 1
+    
+    def draw_line_3d(color, start, end):
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": [start, end]})
+        shader.bind()
+        shader.uniform_float("color", color)
+        batch.draw(shader)
+    
+    def execute(self, context: bpy.types.Context):
+        return {'FINISHED'}
 
 class OT_TestGPUDrawer(bpy.types.Operator):
     bl_idname = 'object.gpu_drawer'
@@ -884,11 +965,13 @@ classes = (
     OpeningsAligner,
     BuildingAssembler, 
     SnappingCopyHandler,
+    MainCastHandler,
     CurveAdder,
     BoundingsHaldler,
     ExtraCurvesEnabler,
     FBXLibraryImporter,
     OT_TestModalOperator,
+    OT_OpeningsDistDrawer,
     OT_TestGPUDrawer,
     OT_SizesDrawer
 )
