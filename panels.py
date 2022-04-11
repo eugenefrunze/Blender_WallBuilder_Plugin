@@ -237,39 +237,38 @@ class TPanel(bpy.types.Panel):
             row = col.row()
             row.prop(spline, 'use_cyclic_u', text='close wall shape')
 
+        #openings tools group
         box = layout.box()
         col = box.column()
-        row = col.row()
-        row.label(text='OPENINGS TOOLS')
+        col.row().label(text='OPENINGS TOOLS')
 
-        row = col.row()
-        row.operator(operators.BoundingsHaldler.bl_idname, text='CREATE OPENING BOUNDS', icon='FILE_3D')
+        col.row().operator(operators.BoundingsHaldler.bl_idname, text='CREATE OPENING BOUNDS', icon='FILE_3D')
 
         box = layout.box()
         col = box.column()
-        row = col.row()
-        row.label(text='TEST PROPERTIES')
+        col.row().label(text='TEST PROPERTIES')
         
-        row = col.row()
-        row.operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
+        col.row().operator(operators.ExtraCurvesEnabler.bl_idname, text='ENABLE EXTRA CURVES', icon='MOD_CURVE')
         
-        row = col.row()
-        row.prop(bpy.data.scenes["Scene"].unit_settings, 'length_unit', text='global units')
+        col.row().prop(bpy.data.scenes["Scene"].unit_settings, 'length_unit', text='global units')
         
-        row = col.row()
-        row.prop(context.scene.props, 'library_fbx_import_path', text='fbx path')
-
-        row = col.row()
-        row.operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
+        col.row().prop(context.scene.props, 'library_fbx_import_path', text='fbx path')
         
-        row = col.row()
-        row.operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
+        col.row().operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
         
-        row = col.row()
-        row.operator(operators.OT_SizesDrawer.bl_idname, text='DRAW CURVE SIZES')
+        col.row().operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
         
-        row = col.row()
-        row.operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
+        
+        col.row().operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
+        
+        box = layout.box()
+        col = box.column()
+        col.row().label(text='OPENGL FEATURES')
+        
+        col.row().operator(operators.OT_SizesDrawer.bl_idname, text='DISTANCE BETWEEN CURVE POINTS')
+        
+        col.row().operator(operators.OT_DistBetweenObjects.bl_idname, text='DISTANCE BETWEEN OBJECTS')
+        col.row().prop(context.scene.props, 'opengl_font_size')
 
 
 #---------------------------------------------------------------------------------------------------
@@ -285,7 +284,7 @@ def register():
 
     #tools panel
     register_class(TPanel)
-
+ 
 
 def unregister():
     from bpy.utils import unregister_class

@@ -1,5 +1,5 @@
-from ctypes import cast
 import pathlib
+from re import X
 
 
 import bpy
@@ -13,7 +13,8 @@ from mathutils import Vector
 from . import data_types
 from . import utils
 from .utils import get_edges_of_selected_verts_2, get_object_bounds_coords, get_bounder_vertices, set_parent, \
-get_vector_from_coordinates, get_vector_center, select_none, set_active, set_boundings_for_object, get_bounder_face
+get_vector_from_coordinates, get_vector_center, select_none, set_active, set_boundings_for_object, get_bounder_face, \
+    get_objects_distance, get_objects_distance_axis
 
 #---------------------------------------------------------------------------------------------------
 # wall builder operators
@@ -577,6 +578,7 @@ class MainCastHandler(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return context.object in context.selected_objects
+        # return context.object.type == 'CURVE' or context.object.wb_props.object_type == 'HELPER '
     
     def execute(self, context: bpy.types.Context):
         src_obj: bpy.types.Object
@@ -686,7 +688,7 @@ class BoundingsHaldler(bpy.types.Operator):
     def execute(self, context):
         obj = context.object
         #check if the object is not of bounding type
-        if obj.props.type == 'BOUNDING':
+        if obj.props.object_type == 'BOUNDING':
             self.report({'WARNING'}, 'The object is itself a bounding!')
             return {'CANCELLED'}
 
@@ -901,6 +903,41 @@ class OT_TestGPUDrawer(bpy.types.Operator):
 
         return {'PASS_THROUGH'}
 
+class OT_DistBetweenObjects(bpy.types.Operator):
+    bl_idname = 'object.distance_drawer'
+    bl_label = 'dist between objects'
+    bl_options = {'REGISTER'}
+    
+    # def poll(self, context):
+    #     return len(context.selected_objects) > 1
+    
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
+        objs = context.selected_objects
+        # if len(objs) == 2:
+        #     dist = get_objects_distance(objs[0], objs[1], 'x')
+        
+        args = (self, context, (0.0, 1.0, 0.0, 1.0), context.scene.props.opengl_font_size, 72, (0, 0, 0), 'Lorem Ipsum', True, objs[0].location)
+        args_3d = (self, context, (context.selected_objects[0].location, context.selected_objects[1].location), (1.0, 1.0, 1.0, 1.0), 1)
+        self._handle_ruler_line_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_callback_line_3D, args_3d, 'WINDOW', 'POST_VIEW')
+        self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D, args, 'WINDOW', 'POST_PIXEL')
+        print('AAABBBBBBBBZZZZ')
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+    
+    def modal(self, context: bpy.types.Context, event: bpy.types.Event):
+        context.area.tag_redraw()
+        if event.type in {'ESC'}:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle_ruler_line_3d, 'WINDOW')
+            return {'CANCELLED'}
+        print('BZZZZZZXXX')
+        return{'PASS_THROUGH'}
+    
+    def execute(self, context: bpy.types.Context):
+        objs = context.selected_objects
+        if len(objs) == 2:
+            dist = get_objects_distance(objs[0], objs[1], 'x')
+        return {'FINISHED'}
 
 class OT_SizesDrawer(bpy.types.Operator):
         bl_idname = 'scene.sizes_drawer'
@@ -908,8 +945,6 @@ class OT_SizesDrawer(bpy.types.Operator):
         bl_options = {'REGISTER'}
         
         def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
-            
-            
             obj = context.object
             points_selected = utils.get_selected_points(obj)
             
@@ -937,7 +972,7 @@ class OT_SizesDrawer(bpy.types.Operator):
             args = (self, context, pairs, obj)
             
             # self._handle_ruler_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_size_ruler_3D, args, 'WINDOW', 'POST_VIEW')
-            self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D, args, 'WINDOW', 'POST_PIXEL')
+            self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D_exp, args, 'WINDOW', 'POST_PIXEL')
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
@@ -973,6 +1008,7 @@ classes = (
     OT_TestModalOperator,
     OT_OpeningsDistDrawer,
     OT_TestGPUDrawer,
+    OT_DistBetweenObjects,
     OT_SizesDrawer
 )
 

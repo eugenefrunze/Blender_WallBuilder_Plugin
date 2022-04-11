@@ -231,7 +231,7 @@ def set_boundings_for_object(opening_mdl: bpy.types.Object, context: bpy.types.C
     
     return 'EEE BOI'
 
-#get object's bounds in coords
+
 def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> tuple:
     """calculates an object's maximum and minimum world positions
     on axes. Returns a tuple of type: (x_max, y_max, z_max, x_min, y_min, z_min).
@@ -297,8 +297,42 @@ def get_bounder_face(bounds_obj: bpy.types.Object) -> list:
     
     return [polygons, face_size]
 
-# def get_objects_distance(first: bpy.types.Object, second)
-            
+def get_objects_distance(object1: bpy.types.Object, object2: bpy.types.Object, axis: str = 'x'):
+    """method returns distance between two objects"""
+    bounds = []
+    #specific operations for certain types of objects
+    for obj in (object1, object2):
+        if obj.type == 'MESH':
+            bounds.append(get_object_bounds_coords(obj))
+        elif obj.type == 'EMPTY':
+            pass
+    
+    axis_ind = data_types.axes[axis]
+        
+    if bounds[0][axis_ind + 3] > bounds[1][axis_ind]:
+        print('======DOROU=====')
+    elif bounds[1][axis_ind + 3] > bounds[0][axis_ind]:
+        print('====DOTVIDANINYA=======')
+    else:
+        print('=====OBJECTS OVERLAPING======')
+    
+        
+    print(bounds)
+    print(axis_ind)
+    
+    return 'jopa'
+
+def get_average_relative_location(object1: bpy.types.Object, object2: bpy.types.Object, axis='x') -> Vector:
+    axis_idx = data_types.axes[axis]
+    return (0, 0, 0)
+
+
+def get_objects_distance_axis(axis: str = '') -> str:
+    """returns calculated or received axis to use between objects"""
+    if axis:
+        return axis
+    else:
+        return 'x'
     
 
 #curves generators
@@ -386,8 +420,6 @@ def get_customers_info():
 
             return interface_list_generated
         
-def get_customers_for_panel():
-    pass
 
 # bgl/gpu/blf operations ---------------------------------------------------------------------------
 def draw_callback_line_3D(self, context: bpy.types.Context, points: tuple, color: tuple, linewidth: int):
@@ -432,7 +464,24 @@ def get_vertex_global_co(obj: bpy.types.Object, v_index: int):
     v_coords = matrix_world @ obj.data.vertices[v_index].co
     return v_coords
 
-def draw_text_callback_2D(self, context: bpy.types.Context, pairs: list, obj: bpy.types.Object):
+def draw_text_callback_2D(self, context: bpy.types.Context, color=(0.0, 1.0, 0.0, 1.0), size=16, dpi=72, \
+                            position=(100, 100, 0), text='Lorem Ipsum', loc3d_to_2d=False, position3D=(1, 1, 1)):
+    v3d = context.space_data
+    rv3d = v3d.region_3d
+    
+    font_id = 0
+    
+    blf.color(font_id, color[0], color[1], color[2], color[3])
+    blf.size(font_id, context.scene.props.opengl_font_size, dpi)
+    if loc3d_to_2d:
+        pos_2d = location_3d_to_region_2d(context.region, rv3d, position3D)
+        blf.position(font_id, pos_2d[0], pos_2d[1], 0)
+    else:
+        blf.position(font_id, position[0], position[1], 0)
+    blf.draw(font_id, text)
+    
+
+def draw_text_callback_2D_exp(self, context: bpy.types.Context, pairs: list, obj: bpy.types.Object):
     
     v3d = context.space_data
     rv3d = v3d.region_3d

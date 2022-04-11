@@ -18,6 +18,7 @@ class ObjectsProps(bpy.types.PropertyGroup):
 
 class SceneProps(bpy.types.PropertyGroup):
     library_fbx_import_path: StringProperty(subtype='DIR_PATH')
+    opengl_font_size: IntProperty(default=10)
     
 class CustomersData(bpy.types.PropertyGroup):
     ucm_id: IntProperty(name='ucm_id')
