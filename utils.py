@@ -18,7 +18,7 @@ from gpu_extras.batch import batch_for_shader
 # BASIC OPERATIONS
 #---------------------------------------------------------------------------------------------------
 
-#base operations
+
 def set_active(object: bpy.types.Object):
     bpy.context.view_layer.objects.active = object
     
