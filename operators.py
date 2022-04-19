@@ -1,7 +1,4 @@
 import pathlib
-from re import X
-
-
 import bpy
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 import gpu
@@ -12,8 +9,8 @@ from mathutils import Vector
 
 from . import data_types
 from . import utils
-from .utils import get_edges_of_selected_verts_2, get_object_bounds_coords, get_bounder_vertices, set_parent, \
-get_vector_from_coordinates, get_vector_center, select_none, set_active, set_boundings_for_object, get_bounder_face, \
+from .utils import get_edges_of_selected_verts, get_object_bounding_coords, get_bounding_vertices, set_parent, \
+get_vector_from_coordinates, get_vector_center, select_none, set_active, set_boundings_for_object, get_bounding_faces, \
     get_objects_distance, get_objects_distance_axis
 
 #---------------------------------------------------------------------------------------------------
@@ -26,7 +23,6 @@ class CustomersBaseHandler(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     def execute(self, context: bpy.types.Context):
         utils.get_customers_info()
-        # print(data_types.customers_json)
         print('--------------------------')
         for idx, item in enumerate(data_types.customers_json):
             if len(data_types.customers_json) > len(context.scene.customers_data):
@@ -424,7 +420,7 @@ class OpeningsAligner(bpy.types.Operator):
         obj: bpy.types.Object = context.object
         for opening in obj.openings:
             if opening.obj.wb_props.helper_type == 'WINDOW':
-                bounds = get_object_bounds_coords(opening.obj, 'WORLD')
+                bounds = get_object_bounding_coords(opening.obj, 'WORLD')
                 opening.obj.location[2] = (obj.location[2] + obj.wb_props.opening_top_offset) - (bounds[2] - opening.obj.location[2])
             
         self.report({'INFO'}, 'Openings aligned')
@@ -651,6 +647,7 @@ class ExtraCurvesEnabler(bpy.types.Operator):
 
 
 class CurveAdder(bpy.types.Operator):
+    # creates fast curves objects. 15.04.22 has only LINE and RECTANGLE
     bl_idname = 'object.curve_adder'
     bl_label = 'ADD CURVE'
     bl_options = {'REGISTER', 'UNDO'}
@@ -663,16 +660,8 @@ class CurveAdder(bpy.types.Operator):
         if self.curve_type == 'RECTANGLE':
             curve = utils.curve_create_rectangle(self, context)
         elif self.curve_type == 'LINE':
-            #adding line
-            # bpy.ops.curve.simple(align='WORLD', location=(0, 0, 0), rotation=(0, 0, 0), Simple_Type='Line', shape='3D', use_cyclic_u=False)
-            # bpy.ops.transform.resize(value=(1, 1, 0))
-            # bpy.ops.curve.spline_type_set(type='POLY')
-            # bpy.ops.object.mode_set(mode='OBJECT')
-            # bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
-
             curve = utils.curve_create_line(self, context, (0, 0, 0, 1), (3, 0, 0, 1))
             print(curve.name)
-
         return {'FINISHED'}
 
 
@@ -778,6 +767,7 @@ class OT_TestModalOperator(bpy.types.Operator):
         self.report({'INFO'}, f'{self.bl_idname} EXECUTED {self.crap} {self.crap2}')
         return {'FINISHED'} 
 
+
 class OT_OpeningsDistDrawer(bpy.types.Operator):
     bl_idname = 'object.dist_btw_openings_drawer'
     bl_label = 'Draw distance between openings'
@@ -865,7 +855,7 @@ class OT_TestGPUDrawer(bpy.types.Operator):
 
         font_id = 0
         blf.position(font_id, 2, 80, 0)
-        blf.size(font_id, 20, 72)
+        blf.size(font_id, context.scene.props.opengl_font_size, 72)
         blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
 
         #calculate the line size in mm
@@ -913,14 +903,14 @@ class OT_DistBetweenObjects(bpy.types.Operator):
     
     def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
         objs = context.selected_objects
-        # if len(objs) == 2:
-        #     dist = get_objects_distance(objs[0], objs[1], 'x')
+        if len(objs) == 2:
+            dist = get_objects_distance(objs[0], objs[1], 'x')
         
         args = (self, context, (0.0, 1.0, 0.0, 1.0), context.scene.props.opengl_font_size, 72, (0, 0, 0), 'Lorem Ipsum', True, objs[0].location)
         args_3d = (self, context, (context.selected_objects[0].location, context.selected_objects[1].location), (1.0, 1.0, 1.0, 1.0), 1)
         self._handle_ruler_line_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_callback_line_3D, args_3d, 'WINDOW', 'POST_VIEW')
         self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D, args, 'WINDOW', 'POST_PIXEL')
-        print('AAABBBBBBBBZZZZ')
+        # print('AAABBBBBBBBZZZZ')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
     
@@ -930,7 +920,7 @@ class OT_DistBetweenObjects(bpy.types.Operator):
             bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
             bpy.types.SpaceView3D.draw_handler_remove(self._handle_ruler_line_3d, 'WINDOW')
             return {'CANCELLED'}
-        print('BZZZZZZXXX')
+        # print('BZZZZZZXXX')
         return{'PASS_THROUGH'}
     
     def execute(self, context: bpy.types.Context):
@@ -940,52 +930,54 @@ class OT_DistBetweenObjects(bpy.types.Operator):
         return {'FINISHED'}
 
 class OT_SizesDrawer(bpy.types.Operator):
-        bl_idname = 'scene.sizes_drawer'
-        bl_label = 'project info'
-        bl_options = {'REGISTER'}
+    # UNFINISHED 15.04.22. Draws sizes between two selected points on curve.
+    # Shows length of new created segment
+    bl_idname = 'scene.sizes_drawer'
+    bl_label = 'project info'
+    bl_options = {'REGISTER'}
+    
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
+        obj = context.object
+        points_selected = utils.get_selected_points(obj)
         
-        def invoke(self, context: bpy.types.Context, event: bpy.types.Event):
-            obj = context.object
-            points_selected = utils.get_selected_points(obj)
-            
-            max_idx = len(obj.data.splines[0].points) - 1
-            pairs = utils.get_points_pairs(points_selected, max_idx)
-            print(f'PAIRS ARE: {pairs}')
-            #get data to draw sizes of
-            #1. get pairs or structure
-            # pairs = [[0,1,0],[4,7,0],[8,12,9]]
-            
-            
-            
-            # size_vector = get_vector_from_coordinates(points_selected[0].co, points_selected[1].co)   
-            # print(size_vector)
-            
-            # length_v = size_vector.length
-            
-            # center = get_vector_center(size_vector)
-            # print(center)
-            
-            # p_sel_new = points_selected[0].co.copy()
-            # p_sel_new.resize(3)
-            
-            # #determine args to send to drawcall  
-            args = (self, context, pairs, obj)
-            
-            # self._handle_ruler_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_size_ruler_3D, args, 'WINDOW', 'POST_VIEW')
-            self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D_exp, args, 'WINDOW', 'POST_PIXEL')
+        max_idx = len(obj.data.splines[0].points) - 1
+        pairs = utils.get_points_pairs(points_selected, max_idx)
+        print(f'PAIRS ARE: {pairs}')
+        #get data to draw sizes of
+        #1. get pairs or structure
+        # pairs = [[0,1,0],[4,7,0],[8,12,9]]
+        
+        
+        
+        # size_vector = get_vector_from_coordinates(points_selected[0].co, points_selected[1].co)   
+        # print(size_vector)
+        
+        # length_v = size_vector.length
+        
+        # center = get_vector_center(size_vector)
+        # print(center)
+        
+        # p_sel_new = points_selected[0].co.copy()
+        # p_sel_new.resize(3)
+        
+        # #determine args to send to drawcall  
+        args = (self, context, pairs, obj)
+        
+        # self._handle_ruler_3d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_size_ruler_3D, args, 'WINDOW', 'POST_VIEW')
+        self._handle_text_2d = bpy.types.SpaceView3D.draw_handler_add(utils.draw_text_callback_2D_exp, args, 'WINDOW', 'POST_PIXEL')
 
-            context.window_manager.modal_handler_add(self)
-            return {'RUNNING_MODAL'}
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+    
+    def modal(self, context: bpy.types.Context, event: bpy.types.Event):
+        context.area.tag_redraw()
+                    
+        if event.type in {'ESC'}:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
+            # bpy.types.SpaceView3D.draw_handler_remove(self._handle_ruler_3d, 'WINDOW')
+            return {'CANCELLED'}
         
-        def modal(self, context: bpy.types.Context, event: bpy.types.Event):
-            context.area.tag_redraw()
-                        
-            if event.type in {'ESC'}:
-                bpy.types.SpaceView3D.draw_handler_remove(self._handle_text_2d, 'WINDOW')
-                # bpy.types.SpaceView3D.draw_handler_remove(self._handle_ruler_3d, 'WINDOW')
-                return {'CANCELLED'}
-            
-            return {'PASS_THROUGH'}
+        return {'PASS_THROUGH'}
             
             
 #---------------------------------------------------------------------------------------------------

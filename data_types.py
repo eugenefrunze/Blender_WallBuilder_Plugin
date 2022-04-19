@@ -28,11 +28,11 @@ customers_json = []
 # ]
 
 levels = (
-    ('KG', 'KG (basement)', ''),
     ('EG', 'EG (1st floor)', ''),
     ('OG', 'OG (2nd floor)', ''),
     ('THIRD', '3rd floor', ''),
-    ('DG', 'DG (last floor)', '')
+    ('DG', 'DG (last floor)', ''),
+    ('KG', 'KG (basement)', '')
 )
 
 class Objects_types:

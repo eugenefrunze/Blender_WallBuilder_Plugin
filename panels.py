@@ -93,8 +93,6 @@ class WBPanel(bpy.types.Panel):
 
                 #IF OBJECT HAS OPENINGS ------------------------------------------------------------
                 if context.object.wb_props.is_converted:
-                    scn = bpy.context.scene
-
                     box = layout.box()
                     col = box.column()
                     row = col.row()
@@ -110,12 +108,10 @@ class WBPanel(bpy.types.Panel):
                     row.operator('object.opnenings_adder', icon='TRIA_DOWN', text='').action = 'DOWN'
                     
                     col = box.column()
-
-                    row = col.row()
-                    row.operator(operators.OpeningsAttacher.bl_idname, text='ATTACH / DETACH OPENINGS')
                     
-                    row = col.row()
-                    row.operator(operators.OpeningsAligner.bl_idname, text='ALIGN OPENINGS')
+                    col.row().operator(operators.BoundingsHaldler.bl_idname, text='CREATE OPENING BOUNDS', icon='FILE_3D')
+                    col.row().operator(operators.OpeningsAttacher.bl_idname, text='ATTACH / DETACH OPENINGS')                    
+                    col.row().operator(operators.OpeningsAligner.bl_idname, text='ALIGN OPENINGS')
                     
                     
             #IF OPENING
@@ -145,7 +141,7 @@ class WBPanel(bpy.types.Panel):
             box = layout.box()
             col = box.column()
             row=col.row()
-            row.label(text='ADDITIONAL WBUILDER TOOLS')
+            row.label(text='WALL BUILDER TOOLS')
 
             #SNAPPING CAST
             # row = col.row()
@@ -159,12 +155,11 @@ class WBPanel(bpy.types.Panel):
             #MAIN CAST
             row = col.row()
             if context.object.wb_props.object_type == 'WALL':
-                row.operator(operators.MainCastHandler.bl_idname, text='CREATE MAIN CAST').action = 'ADD'
+                row.operator(operators.MainCastHandler.bl_idname, text='CREATE CAST', icon='SHADERFX').action = 'ADD'
             elif context.object.wb_props.object_type == 'HELPER' and context.object.wb_props.cast_source:
                 row.label(text=f'SOURCE OBJECT: {context.object.wb_props.cast_source}')
                 row = col.row()
-                row.operator(operators.MainCastHandler.bl_idname, text='REMOVE MAIN CAST').action = 'REMOVE'
-
+                row.operator(operators.MainCastHandler.bl_idname, text='REMOVE CAST', icon='CANCEL').action = 'REMOVE'
 
             box = layout.box()
             col = box.column()
@@ -240,9 +235,7 @@ class TPanel(bpy.types.Panel):
         #openings tools group
         box = layout.box()
         col = box.column()
-        col.row().label(text='OPENINGS TOOLS')
-
-        col.row().operator(operators.BoundingsHaldler.bl_idname, text='CREATE OPENING BOUNDS', icon='FILE_3D')
+        col.row().label(text='OPENINGS PROPERTIES')
 
         box = layout.box()
         col = box.column()
@@ -256,17 +249,13 @@ class TPanel(bpy.types.Panel):
         
         col.row().operator(operators.FBXLibraryImporter.bl_idname, text='IMPORT FBX', icon='DECORATE_DRIVER')
         
-        col.row().operator(operators.OT_TestGPUDrawer.bl_idname, text='OT_TestGPUDrawer')
-        
-        
-        col.row().operator(operators.OT_TestModalOperator.bl_idname, text='Test Modal Operator')
-        
+                
         box = layout.box()
         col = box.column()
         col.row().label(text='OPENGL FEATURES')
         
+        col.row().operator(operators.OT_TestGPUDrawer.bl_idname, text='MESH SIZE DRAWER')
         col.row().operator(operators.OT_SizesDrawer.bl_idname, text='DISTANCE BETWEEN CURVE POINTS')
-        
         col.row().operator(operators.OT_DistBetweenObjects.bl_idname, text='DISTANCE BETWEEN OBJECTS')
         col.row().prop(context.scene.props, 'opengl_font_size')
 

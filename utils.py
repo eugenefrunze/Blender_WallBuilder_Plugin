@@ -1,42 +1,58 @@
-import math
-
-import bpy
 from . import data_types
+import math
 import urllib.request, urllib.error, json
 from json.decoder import JSONDecodeError
-
-import mathutils
-from mathutils import Vector
+import bpy
 from bpy_extras.view3d_utils import location_3d_to_region_2d
+from mathutils import Vector, Euler
 import blf
 import bgl
 import gpu
 from gpu_extras.batch import batch_for_shader
 
 
-#---------------------------------------------------------------------------------------------------
-# BASIC OPERATIONS
-#---------------------------------------------------------------------------------------------------
-
-
 def set_active(object: bpy.types.Object):
+    """sets active object on layer
+
+    Args:
+        object (bpy.types.Object): object to set active
+    """
     bpy.context.view_layer.objects.active = object
     
+
 def set_mode(mode: str):
+    """sets current mode (eg. EDIT, OBJECT etc.)
+
+    Args:
+        mode (str): desired mode
+    """
     bpy.ops.object.mode_set(mode=mode)
 
+
 def select_none():
+    """deselects all in the current mode
+    """
     bpy.ops.object.select_all(action='DESELECT')
 
+
 def set_parent(children: list, parent: bpy.types.Object, keep_transform: bool, context: bpy.types.Context) -> None:
+    """Sets parent object for a group of objects"""
     ctx = context.copy()
     ctx['active_object'] = parent
     ctx['selected_objects'] = children
     ctx['selected_editable_objects'] = children
     bpy.ops.object.parent_set(ctx, keep_transform=keep_transform)
 
-#additional operations
+
 def get_selected_points(obj: bpy.types.Object) -> list:
+    """Returns selected points and their indices of curve object
+    
+    Args:
+        obj (bpy.types.Object): curve object
+        
+    Returns:
+        list: lists of selected points and their indices
+    """
     data = obj.data
     set_mode('OBJECT')
     points = []
@@ -45,49 +61,47 @@ def get_selected_points(obj: bpy.types.Object) -> list:
             points.append([point, idx])
     return points
     
+
 def get_points_pairs(selected: list, max_curve_points_idx: int) -> list:
+    """Returns pairs of neighboring selected points on curve. You have to provide at least 2 points
+
+    Args:
+        selected (list): lists of selected points and their indices. See get_selected_points()
+        max_curve_points_idx (int): maximum index of curve points
+
+    Returns:
+        list: lists of neighboring points pairs indices
+    """
     selected_length = len(selected)
     pairs = []
     if selected_length == 1:
         print('You\'ve selected only one point')
         return None
     elif selected_length == 2:
-        #------------------------------------------------
-        # returns refs to points
-        # pairs.append([selected[0][0], selected[1][0]])
-        #------------------------------------------------
-        
-        #------------------------------------------------
-        # returns points indices
         pairs.append([selected[0][1], selected[1][1]])
-        #------------------------------------------------
         return pairs
     elif selected_length > 2:
         for idx, point in enumerate(selected):
             try:
                 if point[1]+1 == selected[idx+1][1]:
-                    #------------------------------------------------
-                    # returns refs to points
-                    # pairs.append([point[0], selected[idx+1][0]])
-                    #------------------------------------------------
-                    #------------------------------------------------
-                    # returns points indices
                     pairs.append([point[1], selected[idx+1][1]])
-                    #------------------------------------------------
-                    
             except IndexError:
                 if point[1] == max_curve_points_idx and selected[0][1] == 0:
-                    #------------------------------------------------
-                    # returns refs to points
-                    # pairs.append([point[0], selected[0][0]])
-                    #------------------------------------------------
-                    #------------------------------------------------
-                    # returns points indices
                     pairs.append([point[1], selected[0][1]])
-                    #------------------------------------------------
         return pairs
-                
-def get_vector_from_coordinates(point1: Vector, point2: Vector):
+         
+       
+def get_vector_from_coordinates(point1: Vector, point2: Vector) -> Vector:
+    """Returns size-3 vector from curve size-4 points coords. Resulting vector could be used in GPU 
+    rendering
+
+    Args:
+        point1 (Vector): first reducing point
+        point2 (Vector): second reduced point
+
+    Returns:
+        Vector: size-3 calculated vector
+    """
     point1_3d = point1.copy()
     point1_3d.resize(3)
     point2_3d = point2.copy()
@@ -97,7 +111,17 @@ def get_vector_from_coordinates(point1: Vector, point2: Vector):
 def get_vector_center(vector: Vector):
     return vector / 2
     
-def get_edges_of_selected_verts_2(obj: bpy.types.Object, vertices: list):
+
+def get_edges_of_selected_verts(obj: bpy.types.Object, vertices: list) -> dict:
+    """Returns adjacent edges for selected vertices. Works only for meshes
+
+    Args:
+        obj (bpy.types.Object): Object with selected vertices
+        vertices (list): list of vertices selected on mesh
+
+    Returns:
+        dict : key: vertex, val: list of adjacent edges
+    """
     data = obj.data
     groups = {None: []}
     groups.pop(None)
@@ -108,49 +132,47 @@ def get_edges_of_selected_verts_2(obj: bpy.types.Object, vertices: list):
                 edges.append(edge)
         groups[v] = edges
     return groups
-        
-def get_edges_of_selected_verts(obj: bpy.types.Object, vertices: list) -> list:
-    data = obj.data
-    groups: dict
-    edges = []
-    for edge in data.edges:
-        for v in vertices:
-            if v.index in set(edge.vertices):
-                edges.append(edge)
-    if len(edges) > 0:
-        return edges
-    else:
-        return None
+
     
 def get_common_edges_for_verts(edges: list) -> list:
+    """Returns common edges for selected vertices. You must get all edges adjacent to selected
+    vertices first
+
+    Args:
+        edges (list): edges that are adjacent for selected vertices
+
+    Returns:
+        list: edges that are common for selected verts
+    """
     common = []
-    for elem in edges:
-        n = edges.count(elem)
+    for edge in edges:
+        n = edges.count(edge)
         if n > 1:
-            common.append(elem)
-            return common
-    return None
-    
-
-#---------------------------------------------------------------------------------------------------
-# CUSTOM OPERATIONS
-#---------------------------------------------------------------------------------------------------
+            common.append(edge)
+    if len(common) > 0:
+        return common
+    else:
+        return None
 
 
-#objects generation --------------------------------------------------------------------------------
-
-#set boundings for object
 def set_boundings_for_object(opening_mdl: bpy.types.Object, context: bpy.types.Context, extrude: bool):
+    """Surrounds object with new mesh bounding box object. Generally used for openings objects
+
+    Args:
+        opening_mdl (bpy.types.Object): object to surround
+        context (bpy.types.Context): context
+        extrude (bool): make extrusions alongside face sides
+    """
     opening_mdl = context.object
     #get object's bounds
-    obj_bounds_cords = get_object_bounds_coords(opening_mdl, 'WORLD')
+    obj_bounds_cords = get_object_bounding_coords(opening_mdl, 'WORLD')
     #create bounds object
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     bounds_obj: bpy.types.Object = context.object
     bounds_obj.props.type = 'BOUNDING'
     bounds_obj.display_type = 'WIRE'
     bounds_obj.hide_render = True
-    bnds_obj_sides = get_bounder_vertices(bounds_obj)
+    bnds_obj_sides = get_bounding_vertices(bounds_obj)
     for idx, v_grp in enumerate(bnds_obj_sides):
         for v_ind in v_grp:
             if idx < 3:
@@ -168,16 +190,15 @@ def set_boundings_for_object(opening_mdl: bpy.types.Object, context: bpy.types.C
     bounds_obj.wb_props.object_type = 'HELPER'
     bounds_obj.wb_props.helper_type = opening_mdl.wb_props.opening_type[0: len(opening_mdl.wb_props.opening_type) - 1]
     
-    
-    #make opening mesh unselectable
-    # opening_mdl.hide_select = True    
+    #make opening mesh unselectable (OPTIONAL)
+    opening_mdl.hide_select = True    
     
     #change bounder name according to the window model
     bounds_obj.name = opening_mdl.name + '_BND'
     
-    #extrude alongside/opposite face axis
+    #extrude alongside face axes
     if extrude:
-        face_data = get_bounder_face(bounds_obj)
+        face_data = get_bounding_faces(bounds_obj)
         face_inds = [p.index for p in face_data[0]]
         print(f'FACE IDXS: {face_inds}')
         #deselect all polys
@@ -209,7 +230,7 @@ def set_boundings_for_object(opening_mdl: bpy.types.Object, context: bpy.types.C
 
     set_mode(mode='OBJECT')
     
-    #setting bounder origin to window origin
+    #setting bounding object origin to window origin
     bpy.ops.object.select_all(action='DESELECT')
     bounds_obj.select_set(True)
     set_active(opening_mdl)
@@ -228,24 +249,27 @@ def set_boundings_for_object(opening_mdl: bpy.types.Object, context: bpy.types.C
     bpy.ops.object.select_all(action='DESELECT')
     set_active(bounds_obj)
     bounds_obj.select_set(True)
+
+
+def get_object_bounding_coords(obj: bpy.types.Object, space: str = 'WORLD') -> tuple:
+    """Calculates object's maximum and minimum WORLD/OBJECT positions
+    on axes. Returns tuple: (x_max, y_max, z_max, x_min, y_min, z_min).
+    Space should be 'WORLD' for global coords system, 'OBJECT' for local.
+    Used for 
     
-    return 'EEE BOI'
-
-
-def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> tuple:
-    """calculates an object's maximum and minimum world positions
-    on axes. Returns a tuple of type: (x_max, y_max, z_max, x_min, y_min, z_min).
-    Space should be 'WORLD' for global coords system, and 'OBJECT' for local coords system"""
-
-    obj_verts = object.data.vertices
+    Args:
+        obj (bpy.types.Object): object to get coords from
+        space (str): space for calculations
+    """
+    obj_verts = obj.data.vertices
     v_cords_x = []
     v_cords_y = []
     v_cords_z = []
     for v in obj_verts:
         if space == 'WORLD':
-            v_cords_x.append((object.matrix_world @ v.co)[0])
-            v_cords_y.append((object.matrix_world @ v.co)[1])
-            v_cords_z.append((object.matrix_world @ v.co)[2])
+            v_cords_x.append((obj.matrix_world @ v.co)[0])
+            v_cords_y.append((obj.matrix_world @ v.co)[1])
+            v_cords_z.append((obj.matrix_world @ v.co)[2])
         elif space == 'OBJECT':
             v_cords_x.append(v.co[0])
             v_cords_y.append(v.co[1])
@@ -255,19 +279,21 @@ def get_object_bounds_coords(object: bpy.types.Object, space: str = 'WORLD') -> 
     y_min = min(v_cords_y)
     y_max = max(v_cords_y)
     z_min = min(v_cords_z)
-    z_max = max(v_cords_z)
-    # print(z_min)
-    
+    z_max = max(v_cords_z)    
     return (x_max, y_max, z_max, x_min, y_min, z_min)
 
-#get object's bounds vertices indices
-def get_bounder_vertices(object: bpy.types.Object) -> list:
-    """gets parallelepiped object that will be used as bounding box,
-    and returns groups of vertices of faces, depending on the position
-    of the polygons normals in relation to the coordinate axes. Returns
-    list of lists vertices in the order: [[x+][y+][z+],[x-],[y-],[z-]]"""
 
-    obj_data = object.data
+def get_bounding_vertices(obj: bpy.types.Object) -> list:
+    """Returns parallelepiped mesh groups of vertices of faces, depending on the positions
+    of normals on coordinate axes. Returns list of lists vertices in the order: [[x+][y+][z+],[x-],[y-],[z-]]
+    
+    Args:
+        obj (bpy.types.Object): bounding object to get verts from
+        
+    Returns:
+        list: lists of indices on axes: [x+, y+, z+, x-, y-, z-]
+    """
+    obj_data = obj.data
     v_idxs = [[], [], [], [], [], []]
     for p in obj_data.polygons:
         for idx, v in enumerate(list(p.normal)):
@@ -275,17 +301,24 @@ def get_bounder_vertices(object: bpy.types.Object) -> list:
                 v_idxs[idx] = list(p.vertices)
             elif v < 0:
                 v_idxs[idx + 3] = list(p.vertices)
-
     return v_idxs
 
-def get_bounder_face(bounds_obj: bpy.types.Object) -> list:
-    '''-> [[polygon face axis +, polygon face axis -], face side dimension, face axis]'''
-    obj_data: bpy.types.Mesh = bounds_obj.data
+
+def get_bounding_faces(bounding_obj: bpy.types.Object) -> list:
+    '''
+    Args:
+        bounding_obj (bpy.types.Object): bounding box obj
     
+    Returns:
+        list: [[polygon with face+, polygon face-], face side dimension in meters]
+    '''
+    obj_data: bpy.types.Mesh = bounding_obj.data
     polygons = [None, None]
+    #presume that face axis is Y
     axis = 1
-    bounds_dims = bounds_obj.dimensions
+    bounds_dims = bounding_obj.dimensions
     face_size = bounds_dims.y
+    #check if face axis is X
     if bounds_dims.x < bounds_dims.y:
         axis = 0
         face_size = bounds_dims.x
@@ -294,33 +327,44 @@ def get_bounder_face(bounds_obj: bpy.types.Object) -> list:
             polygons[0] = p
         elif p.normal[axis] < 0:
             polygons[1] = p
-    
     return [polygons, face_size]
 
+
 def get_objects_distance(object1: bpy.types.Object, object2: bpy.types.Object, axis: str = 'x'):
-    """method returns distance between two objects"""
+    """11.04.22 UNFINISHED. Returns distance between two objs or sides of spatial objs
+    
+    Args:
+        object1 (bpy.types.Object): first object
+        object2 (bpy.types.Object): second object
+        axis (str): axis to get distance on
+    
+    Returns:
+        None: none
+    """
     bounds = []
-    #specific operations for certain types of objects
+    #specifying operations for certain types of objects
     for obj in (object1, object2):
         if obj.type == 'MESH':
-            bounds.append(get_object_bounds_coords(obj))
+            bounds.append(get_object_bounding_coords(obj))
         elif obj.type == 'EMPTY':
             pass
     
     axis_ind = data_types.axes[axis]
-        
+    print('ENTER CALC PART')
+    #check which object is higher on axis (or objects are overlap)
     if bounds[0][axis_ind + 3] > bounds[1][axis_ind]:
-        print('======DOROU=====')
+        print('======FIRST OBJECT IS THE FIRST=====')
     elif bounds[1][axis_ind + 3] > bounds[0][axis_ind]:
-        print('====DOTVIDANINYA=======')
+        print('======SECOND OBJECT IS THE FIRST=====')
     else:
-        print('=====OBJECTS OVERLAPING======')
+        print('=====OBJECTS OVERLAP======')
+    print('EXIT CALC PART')
     
         
     print(bounds)
     print(axis_ind)
     
-    return 'jopa'
+    return 'none'
 
 def get_average_relative_location(object1: bpy.types.Object, object2: bpy.types.Object, axis='x') -> Vector:
     axis_idx = data_types.axes[axis]
@@ -352,22 +396,21 @@ def curve_create_line(self, context, start: tuple, end: tuple) -> bpy.types.Obje
 
     point0_pos = obj.data.splines[0].points[0].co
     obj.data.splines[0].points[1].co = (point0_pos[0] + context.scene.tools_props.new_length, point0_pos[1], point0_pos[2], point0_pos[3])
-    
-
-
-    # bpy.ops.transform.resize(value=(1, 1, 0))
-    # mat_world = obj.matrix_world
-    # obj.data.splines[0].points[0].co = mat_world.inverted() @ Vector(start)
-    # end_vec = Vector((start[0] + context.scene.tools_props.new_length, end[1], end[2], end[3]))
-    # print(end_vec)
-    # obj.data.splines[0].points[1].co = mat_world.inverted() @ end_vec
-    
+        
     context.object.data.fill_mode = 'NONE'
     bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='MEDIAN')
 
     return context.object
 
 def curve_create_rectangle(self, context) -> bpy.types.Object:
+    """Creates a curve rectangle fast
+
+    Args:
+        context (bpy.types.Context): operator context
+
+    Returns:
+        bpy.types.Object: created object reference
+    """
     length = context.scene.tools_props.new_length
     width = context.scene.tools_props.new_width
     #create shape
@@ -392,13 +435,26 @@ def curve_create_rectangle(self, context) -> bpy.types.Object:
 
 #geom nodes connector method
 def node_group_link(node_group, node1_output, node2_input):
+    """links two nodes in geometry node editor
+
+    Args:
+        node_group (_type_): node group
+        node1_output (_type_): output of the src node
+        node2_input (_type_): input of the dest node
+    """
     node_group.links.new(node1_output, node2_input)
 
 
 #web operations ------------------------------------------------------------------------------------
 
 #generate customers list from API
-def get_customers_info():
+def get_customers_info() -> list:
+    """Method which gets customers info from WEB API
+
+    Returns:
+        list: generates list with ids and names of customers (could be used in panels as Enum).
+        Sets data_types.customers_json with customers data from WEB API
+    """
     interface_list_generated = []
     url = 'https://www.bauvorschau.com/api/clients_measures'
     errmessage = 'BBP->Utils->get_customers_info(): '
@@ -420,9 +476,18 @@ def get_customers_info():
 
             return interface_list_generated
         
-
-# bgl/gpu/blf operations ---------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+# bgl/gpu/blf operations
+#---------------------------------------------------------------------------------------------------
 def draw_callback_line_3D(self, context: bpy.types.Context, points: tuple, color: tuple, linewidth: int):
+    """Regular callback for 3D post_view line segment drawing
+
+    Args:
+        context (bpy.types.Context): operator context
+        points (tuple): two points for line segment
+        color (tuple): color of the segment
+        linewidth (int): width of the line segment
+    """
     bgl.glEnable(bgl.GL_BLEND)
     bgl.glEnable(bgl.GL_LINE_SMOOTH)
     bgl.glEnable(bgl.GL_DEPTH_TEST)
@@ -439,13 +504,18 @@ def draw_callback_line_3D(self, context: bpy.types.Context, points: tuple, color
     bgl.glEnable(bgl.GL_DEPTH_TEST)
     
 def draw_size_ruler_3D(self, context: bpy.types.Context):
+    """14.04.22 UNFINISHED. Renders single line for POST_VIEW size rendering
+
+    Args:
+        context (bpy.types.Context): operator context
+    """
     obj = context.object
     omw = obj.matrix_world
     
     point0 = get_vertex_global_co(obj, 0)
     inverted_normal = obj.data.vertices[0].normal * 2
     
-    eul = mathutils.Euler((1, 2, 1), 'XYZ')
+    eul = Euler((1, 2, 1), 'XYZ')
     eul.rotate_axis('Z', math.radians(2))
     
     inverted_normal_2D = Vector((inverted_normal[0], inverted_normal[1], obj.data.vertices[0].co[2]))
@@ -460,12 +530,32 @@ def draw_size_ruler_3D(self, context: bpy.types.Context):
     draw_callback_line_3D(self, context, (point0, inverted_normal_2D_global), (0.0, 1.0, 0.0, 1.0), 1)
     
 def get_vertex_global_co(obj: bpy.types.Object, v_index: int):
+    """UNFINISHED 14.04.22. Returns global position of vertex
+
+    Args:
+        obj (bpy.types.Object): object including vertex
+        v_index (int): index of vertex
+
+    Returns:
+        Vector: global vertex coords vector
+    """
     matrix_world = obj.matrix_world
     v_coords = matrix_world @ obj.data.vertices[v_index].co
     return v_coords
 
 def draw_text_callback_2D(self, context: bpy.types.Context, color=(0.0, 1.0, 0.0, 1.0), size=16, dpi=72, \
                             position=(100, 100, 0), text='Lorem Ipsum', loc3d_to_2d=False, position3D=(1, 1, 1)):
+    """draws text in viewport
+
+    Args:
+        context (bpy.types.Context): operator context
+        color (tuple, optional): color of text. Defaults to (0.0, 1.0, 0.0, 1.0).
+        size (int, optional): size in pixels. Defaults to 16.
+        dpi (int, optional): dpi. Defaults to 72.
+        text (str, optional): text contents. Defaults to 'Lorem Ipsum'.
+        loc3d_to_2d (bool, optional): draw 3d text pos in sceen space. Defaults to False.
+        position3D (tuple, optional): position in 3d space. Defaults to (1, 1, 1).
+    """
     v3d = context.space_data
     rv3d = v3d.region_3d
     
@@ -482,7 +572,13 @@ def draw_text_callback_2D(self, context: bpy.types.Context, color=(0.0, 1.0, 0.0
     
 
 def draw_text_callback_2D_exp(self, context: bpy.types.Context, pairs: list, obj: bpy.types.Object):
-    
+    """UNFINISHED 14.04.22. Use draw_text_callback_2D instead. Renders text between two spline points
+
+    Args:
+        context (bpy.types.Context): operator context
+        pairs (list): pairs of points to show dist between
+        obj (bpy.types.Object): spline object
+    """
     v3d = context.space_data
     rv3d = v3d.region_3d
     
@@ -496,7 +592,7 @@ def draw_text_callback_2D_exp(self, context: bpy.types.Context, pairs: list, obj
         center = bpy.context.object.matrix_world @ center_3d
         text_pos = location_3d_to_region_2d(context.region, rv3d, center)
         blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
-        blf.size(font_id, 20, 72)
+        blf.size(font_id, context.scene.props.opengl_font_size, 72)
         blf.position(font_id, 100, 100, 0)
         print(pair)
         blf.position(font_id, text_pos[0], text_pos[1], 0)
@@ -509,7 +605,3 @@ def draw_text_callback_2D_exp(self, context: bpy.types.Context, pairs: list, obj
             blf.draw(font_id, '%.2f cm' % (length * 100))
         else:
             blf.draw(font_id, 'unsupported length units')
-            
-            
-
-    # blf.draw(font_id, '%.2f m | %.2f m | %.2f m' % (dims[0], dims[1], dims[2]))

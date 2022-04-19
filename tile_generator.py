@@ -95,28 +95,40 @@ def get_selected_polys_indices(obj) -> list:
             selected_polys_indices.append(poly.index)
     return selected_polys_indices
 
-def get_tile_on_roof_location(roof: bpy.types.Object) -> Vector:
+def get_tile_on_roof_location(obj: bpy.types.Object) -> Vector:
     """returns the location vector for tile object. At the moment (03.08.21)
-    you have to specify reference vertex manually. Select the most __left__ vertex on the face/faces"""
-    for vert in roof.data.vertices:
+    you have to specify reference vertex manually. Select the most __left__ vertex on the face/faces
+    
+    Args:
+        obj (bpy.types.Object): object with verts
+        
+    Returns:
+        Vector: returns selected vert global coords
+    """
+    for vert in obj.data.vertices:
         if vert.select:
-            # return vertex global position
-            return roof.matrix_world @ vert.co
-    # if no vertices are selected
+            return obj.matrix_world @ vert.co
     return None
 
-def get_edges_border_indices(roof: bpy.types.Object) -> list:
-    """returns the list of border edges. At the moment (03.08.21) you have to specifiy edges manually"""
-    edges_list = []
-    for edge in roof.data.edges:
+def get_selected_edges(obj: bpy.types.Object) -> list:
+    """returns list of selected edges
+
+    Args:
+        obj (bpy.types.Object): object with edges
+
+    Returns:
+        list: selected edges
+    """
+    edges_sel = []
+    for edge in obj.data.edges:
         if edge.select:
-            edges_list.append(edge.index)
-    return edges_list
+            edges_sel.append(edge.index)
+    return edges_sel
 
 # tile pattern generaator part
 # method should be used to determine tiles count on width and height [x, y]. 04.08.21 - it uses fixed count: [50, 50]
 def get_tiles_count(roof: bpy.types.Object) -> list:
-    return [50, 20]
+    return [100, 100]
 
 def generate_tiles_pattern(self, roof: bpy.types.Object, tile: bpy.types.Object, tile_dimensions: Vector):
 
@@ -143,6 +155,9 @@ def generate_tiles_pattern(self, roof: bpy.types.Object, tile: bpy.types.Object,
     mod_arr_x.constant_offset_displace = [-tile_dimensions[0] * 2 * tile.prop_bias_vertical, 0, 0]
 
 def get_roof_dimensions():
+    pass
+
+def get_lowest_edge():
     pass
 
 # OPERATORS ======================================================================================================
@@ -192,7 +207,7 @@ class EdgesSelector(bpy.types.Operator):
         roof_object = bpy.context.object
         # set mode to 'OBJECT' to refresh selection
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-        bpy.types.Object.edges_border = get_edges_border_indices(roof_object)
+        bpy.types.Object.edges_border = 'get_edges_border_indices'(roof_object)
         if len(bpy.context.object.edges_border) == 0:
             self.report({'ERROR'}, f'YOU HAVEN\'T SELECTED ANY EDGES')
             return {'CANCELLED'}
@@ -491,7 +506,7 @@ def unregister():
     del bpy.types.Object.tiles_count_x
     del bpy.types.Object.tiles_count_y
     del bpy.types.Scene.object_tile_model
-    del bpy.types.Scene.tgen_proxy_path
+    # del bpy.types.Scene.tgen_proxy_path
     del bpy.types.Object.tgen_proxy_name
     del bpy.types.Scene.test_prop_caller
     del bpy.types.MeshPolygon.selected_roof_polygon
