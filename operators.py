@@ -118,8 +118,10 @@ class WallBuilder(bpy.types.Operator):
             obj.name = 'wb_wall_{0}_{1}'.format('inner' if wb_props.is_inner_wall else 'outer', wb_props.level)
             # geometry nodes modifier
             geom_nodes_mod = bpy.context.object.modifiers.new("wb_geom_nodes", 'NODES')
+            bpy.ops.node.new_geometry_node_group_assign()
             node_group = geom_nodes_mod.node_group
-            node_group.name = '{}_geom_nodes_node_group'.format(obj.name)
+            # node_group.name = '{}_geom_nodes_node_group'.format(obj.name)
+            node_group.name = '{}_geom_nodes_node_group'.format(bpy.context.object.name)
             # creating nodes
             nd_input = node_group.nodes['Group Input']
             nd_output = node_group.nodes['Group Output']
